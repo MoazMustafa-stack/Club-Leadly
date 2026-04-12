@@ -25,7 +25,7 @@ if config.config_file_name is not None:
 
 # Import all models so autogenerate can detect them
 from app.database import Base  # noqa: E402
-from app.models import Club, Membership, PointLog, Task, User  # noqa: E402, F401
+from app.models import Club, Membership, PointLog, PushToken, Task, User  # noqa: E402, F401
 
 target_metadata = Base.metadata
 
