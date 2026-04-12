@@ -76,6 +76,13 @@ class CreateTaskRequest(BaseModel):
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
 
+    @field_validator("due_at", mode="after")
+    @classmethod
+    def strip_tz(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
+
 
 class UpdateTaskRequest(BaseModel):
     title: str | None = Field(default=None, min_length=2)
@@ -83,6 +90,13 @@ class UpdateTaskRequest(BaseModel):
     point_value: int | None = Field(default=None, ge=1)
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
+
+    @field_validator("due_at", mode="after")
+    @classmethod
+    def strip_tz(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is not None:
+            return v.replace(tzinfo=None)
+        return v
 
 
 class TaskResponse(BaseModel):

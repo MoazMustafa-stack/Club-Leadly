@@ -1,5 +1,5 @@
 /* ── globals ───────────────────────────────────────────── */
-const API = "http://127.0.0.1:8000";
+const API = `http://${window.location.hostname}:8000`;
 let token = localStorage.getItem("token");
 let decoded = null; // parsed JWT payload
 
@@ -12,9 +12,16 @@ function parseJwt(t) {
 }
 
 async function api(path, opts = {}) {
-  const headers = { "Content-Type": "application/json", ...opts.headers };
+  const headers = { ...opts.headers };
+  if (opts.body) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API}${path}`, { ...opts, headers });
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, { ...opts, headers });
+  } catch (err) {
+    console.error(`Network error on ${opts.method || "GET"} ${path}:`, err);
+    throw new Error(`Network error – is the backend running on ${API}?`);
+  }
   const body = res.headers.get("content-type")?.includes("json")
     ? await res.json()
     : await res.text();
