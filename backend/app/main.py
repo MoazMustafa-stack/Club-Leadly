@@ -6,7 +6,7 @@ from .routers import auth, clubs, points, tasks
 
 load_dotenv()
 
-app = FastAPI(title="ClubApp API", version="0.1.0")
+app = FastAPI(title="Club Leadly API", version="0.1.0")
 
 # ---------------------------------------------------------------------------
 # CORS — allow the mobile dev server and local web dev servers

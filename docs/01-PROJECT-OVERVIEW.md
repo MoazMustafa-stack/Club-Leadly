@@ -8,10 +8,10 @@ A **multi-tenant mobile app** for college clubs. Club leaders manage members, as
 
 | Layer | Technology |
 |-------|-----------|
-| Backend API | Python 3.11, FastAPI, SQLAlchemy 2.0 (async), PostgreSQL 16 |
+| Backend API | Python 3.14, FastAPI 0.135, SQLAlchemy 2.0 (async), asyncpg |
 | Mobile App | React Native (Expo) + TypeScript *(future phase)* |
-| Auth | JWT (HS256) via python-jose, bcrypt via passlib |
-| Database | PostgreSQL 16, managed via Alembic migrations |
+| Auth | JWT (HS256) via python-jose, bcrypt 4.3 (direct) |
+| Database | Supabase PostgreSQL, managed via Alembic migrations |
 
 > **Note:** The original spec mentioned a React web frontend. This project targets **mobile first** using React Native. The backend API is identical — only the client changes.
 
@@ -32,7 +32,7 @@ A **multi-tenant mobile app** for college clubs. Club leaders manage members, as
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 1 | Project scaffold, DB models, Auth + Club endpoints | 🔨 In Progress |
-| 2 | Task endpoints, Point awarding, Leaderboard | ⏳ Planned |
+| 1 | Project scaffold, DB models, Auth + Club endpoints | ✅ Complete |
+| 2 | Task CRUD, Point awarding, Leaderboard | ✅ Complete |
 | 3 | React Native mobile app (auth screens, club screens) | ⏳ Planned |
 | 4 | Push notifications, email, polish | ⏳ Planned |

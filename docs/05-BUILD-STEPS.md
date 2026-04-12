@@ -4,7 +4,7 @@ Each step produces a working commit pushed to GitHub. We build incrementally —
 
 ---
 
-## Step 1: Project Scaffold + Dependencies
+## Step 1: Project Scaffold + Dependencies ✅
 **Commit:** `feat: project scaffold with requirements and env config`
 
 - Create folder structure: `backend/app/`, `backend/app/routers/`, `backend/alembic/`
@@ -13,70 +13,85 @@ Each step produces a working commit pushed to GitHub. We build incrementally —
 - Create `__init__.py` files
 - Create `.gitignore` for Python projects
 
-**Verify:** Folder structure exists, deps can be pip-installed
-
 ---
 
-## Step 2: Database Layer + ORM Models
+## Step 2: Database Layer + ORM Models ✅
 **Commit:** `feat: database engine, session factory, and all ORM models`
 
 - `database.py` — async engine, session maker, Base, `get_db` dependency
 - `models.py` — User, Club, Membership, Task, PointLog with full relationships
 
-**Verify:** `python -c "from app.models import *"` runs without error
-
 ---
 
-## Step 3: Auth Helpers + Pydantic Schemas
+## Step 3: Auth Helpers + Pydantic Schemas ✅
 **Commit:** `feat: JWT/password helpers, Pydantic schemas, auth dependencies`
 
 - `auth.py` — hash_password, verify_password, create_access_token, decode_access_token
 - `schemas.py` — all request/response models
 - `dependencies.py` — get_current_user, require_organiser
 
-**Verify:** All imports resolve cleanly
-
 ---
 
-## Step 4: Auth Router
+## Step 4: Auth Router ✅
 **Commit:** `feat: POST /auth/register and /auth/login endpoints`
 
 - `routers/auth.py` — register + login with full validation
 - Avatar initials derivation logic
 - JWT issued on register (no club) and login (with club if membership exists)
 
-**Verify:** Can curl `/auth/register` and get a token back
-
 ---
 
-## Step 5: Club Router
+## Step 5: Club Router ✅
 **Commit:** `feat: club create, join, detail, and members endpoints`
 
 - `routers/clubs.py` — POST /clubs, POST /clubs/join, GET /clubs/me, GET /clubs/members
 - Join code generation with collision check
 - Token refresh on create/join
 
-**Verify:** Full auth → create club → get club details flow works
-
 ---
 
-## Step 6: Main App Assembly
+## Step 6: Main App Assembly ✅
 **Commit:** `feat: FastAPI app with CORS, routers, and health check`
 
-- `main.py` — app creation, CORS, router mounting, startup table creation, /health
+- `main.py` — app creation, CORS, router mounting, /health
 - Wire everything together
-
-**Verify:** `uvicorn app.main:app --reload` starts, `/health` returns ok, `/docs` shows Swagger
 
 ---
 
-## Step 7: Alembic Scaffold
-**Commit:** `feat: alembic migration scaffold`
+## Step 7: Alembic Migration ✅
+**Commit:** `feat: alembic migration scaffold` + `fix: Supabase connection + Alembic migration`
 
-- `alembic init alembic`
-- Configure `alembic.ini` and `env.py` for async
+- Alembic configured for async with Supabase SSL
+- Initial migration applied — 5 tables live in Supabase (users, clubs, memberships, tasks, point_logs)
 
-**Verify:** `alembic check` runs without error
+---
+
+## Step 8: Task CRUD ✅
+**Commit:** `feat: Phase 2 — Task CRUD + Point awarding + Leaderboard`
+
+- `routers/tasks.py` — 6 endpoints: create, list, get, update, delete, complete
+- Task completion auto-awards `point_value` to the assigned user
+- Organiser-only gating for create/update/delete
+- Assignment validation (user must be a club member)
+
+---
+
+## Step 9: Point System + Leaderboard ✅
+**Commit:** (included in Phase 2 commit)
+
+- `routers/points.py` — 3 endpoints: manual award/deduct, leaderboard, audit log
+- Leaderboard ranks members by `total_points` descending
+- Full point history with reason tracking
+
+---
+
+## Step 10: React Native Mobile App ⏳
+**Status:** Not started
+
+- Auth screens (register, login)
+- Club screens (create, join, details)
+- Task screens (list, create, complete)
+- Leaderboard screen
 
 ---
 
