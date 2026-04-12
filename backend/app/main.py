@@ -35,6 +35,7 @@ allowed_origins = [
     "http://localhost:8081",
     "http://localhost:19006",
     "http://localhost:3000",
+    "https://club-leadly.vercel.app",
     os.getenv("FRONTEND_ORIGIN", "").rstrip("/"),
 ]
 allowed_origins = [o for o in allowed_origins if o]
@@ -42,7 +43,7 @@ allowed_origins = [o for o in allowed_origins if o]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.expo\.dev",
+    allow_origin_regex=r"https://.*\.(expo\.dev|vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
