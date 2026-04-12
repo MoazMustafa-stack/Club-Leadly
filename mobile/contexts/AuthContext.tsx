@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
+import * as Notifications from "expo-notifications";
+import { useQueryClient } from "@tanstack/react-query";
 import { tokenStorage } from "../lib/storage";
 import api from "../lib/api";
 import type {
@@ -19,6 +21,15 @@ function decodeJWT(token: string): JWTPayload {
   return JSON.parse(json);
 }
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = decodeJWT(token);
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Context shape
 // ---------------------------------------------------------------------------
@@ -32,6 +43,7 @@ interface AuthState {
   createClub: (data: CreateClubRequest) => Promise<void>;
   joinClub: (data: JoinClubRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 
   /** Convenience booleans */
   isAuthenticated: boolean;
@@ -48,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<JWTPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Hydrate token from secure store on mount
   useEffect(() => {
@@ -74,6 +87,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await tokenStorage.set(newToken);
     setToken(newToken);
     setUser(decodeJWT(newToken));
+  }, []);
+
+  const refreshAuth = useCallback(async () => {
+    const stored = await tokenStorage.get();
+    if (stored) {
+      try {
+        const payload = decodeJWT(stored);
+        if (payload.exp * 1000 > Date.now()) {
+          setToken(stored);
+          setUser(payload);
+        } else {
+          await tokenStorage.remove();
+          setToken(null);
+          setUser(null);
+        }
+      } catch {
+        await tokenStorage.remove();
+        setToken(null);
+        setUser(null);
+      }
+    } else {
+      setToken(null);
+      setUser(null);
+    }
   }, []);
 
   const login = useCallback(
@@ -124,7 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await tokenStorage.remove();
     setToken(null);
     setUser(null);
-  }, []);
+    queryClient.clear();
+    try {
+      await Notifications.setBadgeCountAsync(0);
+    } catch {
+      // Badge count not supported on all platforms
+    }
+  }, [queryClient]);
 
   const isAuthenticated = token !== null;
   const hasClub = user?.club_id !== null && user?.club_id !== undefined;
@@ -141,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createClub,
         joinClub,
         logout,
+        refreshAuth,
         isAuthenticated,
         hasClub,
         isOrganiser,
