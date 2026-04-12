@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import auth, clubs
+from .routers import auth, clubs, points, tasks
 
 load_dotenv()
 
@@ -29,6 +29,8 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 app.include_router(auth.router)
 app.include_router(clubs.router)
+app.include_router(tasks.router)
+app.include_router(points.router)
 
 
 # Health check

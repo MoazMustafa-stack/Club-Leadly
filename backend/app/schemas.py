@@ -63,3 +63,66 @@ class ClubDetailResponse(BaseModel):
     club: ClubResponse
     members: list[MemberResponse]
     total_members: int
+
+
+# ---------------------------------------------------------------------------
+# Task schemas
+# ---------------------------------------------------------------------------
+
+class CreateTaskRequest(BaseModel):
+    title: str = Field(min_length=1)
+    description: str | None = None
+    point_value: int = Field(default=10, ge=1)
+    assigned_to_user_id: uuid.UUID | None = None
+    due_at: datetime | None = None
+
+
+class UpdateTaskRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1)
+    description: str | None = None
+    point_value: int | None = Field(default=None, ge=1)
+    assigned_to_user_id: uuid.UUID | None = None
+    due_at: datetime | None = None
+
+
+class TaskResponse(BaseModel):
+    id: uuid.UUID
+    club_id: uuid.UUID
+    assigned_to_user_id: uuid.UUID | None
+    title: str
+    description: str | None
+    point_value: int
+    status: str
+    due_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Point schemas
+# ---------------------------------------------------------------------------
+
+class AwardPointsRequest(BaseModel):
+    user_id: uuid.UUID
+    delta: int
+    reason: str = Field(min_length=1)
+
+
+class PointLogResponse(BaseModel):
+    id: uuid.UUID
+    club_id: uuid.UUID
+    user_id: uuid.UUID
+    delta: int
+    reason: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class LeaderboardEntry(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    avatar_initials: str
+    total_points: int
+    rank: int
