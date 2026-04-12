@@ -39,5 +39,8 @@ node_modules/
 # Misc
 *.log
 
-#Docs
+# Docs
 docs/*
+
+# Prompt / spec files
+copilot_prompt*.md
