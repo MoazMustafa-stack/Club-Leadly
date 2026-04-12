@@ -34,7 +34,7 @@ export default function LeaderboardScreen() {
       return (
         <View key={entry.user_id} style={[styles.podiumItem, isMe && styles.podiumHighlight]}>
           <Text style={styles.medal}>{MEDAL[idx]}</Text>
-          <Avatar name={entry.full_name} size="lg" />
+          <Avatar initials={entry.avatar_initials} colorSeed={entry.full_name} size="lg" />
           <Text style={styles.podiumName} numberOfLines={1}>
             {entry.full_name}
           </Text>
@@ -55,7 +55,7 @@ export default function LeaderboardScreen() {
       return (
         <View style={[styles.row, isMe && styles.rowHighlight]}>
           <Text style={styles.rank}>#{item.rank}</Text>
-          <Avatar name={item.full_name} size="sm" />
+          <Avatar initials={item.avatar_initials} colorSeed={item.full_name} size="sm" />
           <View style={styles.rowInfo}>
             <Text style={styles.rowName} numberOfLines={1}>
               {item.full_name}

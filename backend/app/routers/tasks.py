@@ -235,7 +235,9 @@ async def complete_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    if task.assigned_to_user_id != current_user.user_id:
+    is_assignee = task.assigned_to_user_id == current_user.user_id
+    is_organiser = current_user.role == "organiser"
+    if not is_assignee and not is_organiser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This task is not assigned to you",
@@ -250,10 +252,13 @@ async def complete_task(
     # Atomic: status + point log + membership points
     task.status = TaskStatusEnum.completed
 
+    # Credit points to the assignee if present, otherwise the completer
+    credit_user_id = task.assigned_to_user_id or current_user.user_id
+
     mem_result = await db.execute(
         select(Membership).where(
             Membership.club_id == club_id,
-            Membership.user_id == current_user.user_id,
+            Membership.user_id == credit_user_id,
         )
     )
     membership = mem_result.scalar_one_or_none()
@@ -261,7 +266,7 @@ async def complete_task(
         membership.total_points += task.point_value
         db.add(PointLog(
             club_id=club_id,
-            user_id=current_user.user_id,
+            user_id=credit_user_id,
             delta=task.point_value,
             reason=f"Completed task: {task.title}",
         ))

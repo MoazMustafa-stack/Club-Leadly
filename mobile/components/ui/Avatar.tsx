@@ -34,7 +34,7 @@ export default function Avatar({
   colorSeed,
   size = "md",
 }: AvatarProps) {
-  const bg = colorFromSeed(colorSeed ?? initials);
+  const bg = colorFromSeed(colorSeed ?? initials ?? "?");
   const dim = SIZES[size];
 
   return (
