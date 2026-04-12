@@ -69,13 +69,17 @@ async def create_task(
         )
         assigned_name = user_result.scalar_one_or_none()
 
+    due_at = body.due_at
+    if due_at is not None and due_at.tzinfo is not None:
+        due_at = due_at.replace(tzinfo=None)
+
     task = Task(
         club_id=club_id,
         title=body.title,
         description=body.description,
         point_value=body.point_value,
         assigned_to_user_id=body.assigned_to_user_id,
-        due_at=body.due_at,
+        due_at=due_at,
     )
     db.add(task)
     await db.commit()
