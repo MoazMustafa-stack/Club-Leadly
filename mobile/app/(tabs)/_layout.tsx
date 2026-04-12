@@ -8,11 +8,14 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: INACTIVE,
-        headerStyle: { backgroundColor: "#7C3AED" },
-        headerTintColor: "#FFFFFF",
-        headerTitleStyle: { fontWeight: "700" },
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 0.5,
+          borderTopColor: "#E5E7EB",
+        },
       }}
     >
       <Tabs.Screen
@@ -29,7 +32,7 @@ export default function TabsLayout() {
         options={{
           title: "Tasks",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkbox-outline" size={size} color={color} />
+            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
           ),
         }}
       />
@@ -38,7 +41,7 @@ export default function TabsLayout() {
         options={{
           title: "Leaderboard",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy-outline" size={size} color={color} />
+            <Ionicons name="podium-outline" size={size} color={color} />
           ),
         }}
       />
