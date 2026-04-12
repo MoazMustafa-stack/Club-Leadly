@@ -95,17 +95,19 @@ http://localhost:8000
   "due_at": "2026-04-20T23:59:00"
 }
 ```
-**Returns:** `TaskResponse` (201 Created)  
+**Returns:** `TaskResponse` (201 Created) — includes `assigned_to_name` resolved from the user record  
 **Errors:** `400` if assigned user is not a member, `403` if not organiser
 
 ### GET /tasks
 **Auth:** Any club member  
-**Returns:** `list[TaskResponse]` — all tasks in the club, newest first
+**Returns:** `list[TaskResponse]` — **role-based filtering:**
+- **Organiser:** sees all tasks in the club, ordered by `created_at` DESC
+- **Member:** sees only tasks assigned to them, ordered by `due_at` ASC (nulls last)
 
 ### GET /tasks/{task_id}
 **Auth:** Any club member  
 **Returns:** `TaskResponse`  
-**Errors:** `404` if task not found or not in current club
+**Errors:** `404` if task not found or not in current club, `403` if member and task is not assigned to them
 
 ### PATCH /tasks/{task_id}
 **Auth:** Organiser only  
@@ -124,15 +126,15 @@ http://localhost:8000
 
 ### DELETE /tasks/{task_id}
 **Auth:** Organiser only  
-**Returns:** `204 No Content`  
-**Errors:** `404` task not found, `403` not organiser
+**Returns:** `200` with `{"message": "Task deleted"}`  
+**Errors:** `404` task not found, `400` cannot delete a completed task, `403` not organiser
 
-### POST /tasks/{task_id}/complete
-**Auth:** The assigned member or any organiser  
+### PATCH /tasks/{task_id}/complete
+**Auth:** The assigned member only (organiser cannot complete on behalf)  
 **Body:** None  
-**Returns:** `TaskResponse` with `status: "completed"`  
+**Returns:** `TaskResponse` with `status: "completed"` and `assigned_to_name`  
 **Side effects:** Automatically awards `point_value` to the assigned user's `total_points` and creates a `PointLog` entry  
-**Errors:** `400` already completed, `403` not assigned and not organiser, `404` task not found
+**Errors:** `400` already completed, `403` "This task is not assigned to you", `404` task not found
 
 ---
 
@@ -140,7 +142,7 @@ http://localhost:8000
 
 > All routes require `Authorization: Bearer <token>` with a valid `club_id`.
 
-### POST /points
+### POST /points/award
 **Auth:** Organiser only  
 **Body:**
 ```json
@@ -150,28 +152,38 @@ http://localhost:8000
   "reason": "Extra credit for event organisation"
 }
 ```
-**Note:** Positive `delta` = award, negative `delta` = deduction  
+**Note:** Positive `delta` = award, negative `delta` = deduction. `delta` cannot be zero, `reason` must be at least 3 characters.  
 **Returns:** `PointLogResponse` (201 Created)  
-**Errors:** `400` if user is not a member, `403` not organiser
+**Errors:** `404` if user is not a member of this club, `403` not organiser
 
 ### GET /points/leaderboard
 **Auth:** Any club member  
-**Returns:** `list[LeaderboardEntry]` ranked by `total_points` descending
+**Returns:** `LeaderboardResponse` wrapper:
 ```json
-[
-  {
-    "user_id": "uuid",
-    "full_name": "John Doe",
-    "avatar_initials": "JD",
-    "total_points": 45,
-    "rank": 1
-  }
-]
+{
+  "club_id": "uuid",
+  "entries": [
+    {
+      "rank": 1,
+      "user_id": "uuid",
+      "full_name": "John Doe",
+      "avatar_initials": "JD",
+      "total_points": 45,
+      "tasks_completed": 3
+    }
+  ],
+  "generated_at": "2026-04-12T15:30:00Z"
+}
 ```
 
-### GET /points/log
+### GET /points/history
 **Auth:** Any club member  
-**Returns:** `list[PointLogResponse]` — full audit log, newest first
+**Query params:** `?user_id=uuid` (optional)  
+**Role-based access:**
+- **Member:** can only view own history (if `user_id` is omitted, defaults to self; if different user_id is specified, returns `403`)
+- **Organiser:** can view any member's history, or omit `user_id` to see all club history
+
+**Returns:** `list[PointLogResponse]` — audit log, newest first
 ```json
 [
   {
