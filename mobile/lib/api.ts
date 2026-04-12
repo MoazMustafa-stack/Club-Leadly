@@ -1,5 +1,5 @@
-import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { tokenStorage } from "./storage";
 
 const API_BASE =
   Platform.OS === "web"
@@ -16,7 +16,7 @@ class ApiError extends Error {
 }
 
 async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync("access_token");
+  return tokenStorage.get();
 }
 
 async function api<T>(

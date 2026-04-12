@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
+import { tokenStorage } from "../lib/storage";
 import api from "../lib/api";
 import type {
   JWTPayload,
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Hydrate token from secure store on mount
   useEffect(() => {
     (async () => {
-      const stored = await SecureStore.getItemAsync("access_token");
+      const stored = await tokenStorage.get();
       if (stored) {
         try {
           const payload = decodeJWT(stored);
@@ -60,10 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(stored);
             setUser(payload);
           } else {
-            await SecureStore.deleteItemAsync("access_token");
+            await tokenStorage.remove();
           }
         } catch {
-          await SecureStore.deleteItemAsync("access_token");
+          await tokenStorage.remove();
         }
       }
       setIsLoading(false);
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const saveToken = useCallback(async (newToken: string) => {
-    await SecureStore.setItemAsync("access_token", newToken);
+    await tokenStorage.set(newToken);
     setToken(newToken);
     setUser(decodeJWT(newToken));
   }, []);
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync("access_token");
+    await tokenStorage.remove();
     setToken(null);
     setUser(null);
   }, []);
