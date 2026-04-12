@@ -70,7 +70,7 @@ class ClubDetailResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CreateTaskRequest(BaseModel):
-    title: str = Field(min_length=1)
+    title: str = Field(min_length=2)
     description: str | None = None
     point_value: int = Field(default=10, ge=1)
     assigned_to_user_id: uuid.UUID | None = None
@@ -78,7 +78,7 @@ class CreateTaskRequest(BaseModel):
 
 
 class UpdateTaskRequest(BaseModel):
-    title: str | None = Field(default=None, min_length=1)
+    title: str | None = Field(default=None, min_length=2)
     description: str | None = None
     point_value: int | None = Field(default=None, ge=1)
     assigned_to_user_id: uuid.UUID | None = None
@@ -88,9 +88,10 @@ class UpdateTaskRequest(BaseModel):
 class TaskResponse(BaseModel):
     id: uuid.UUID
     club_id: uuid.UUID
-    assigned_to_user_id: uuid.UUID | None
     title: str
     description: str | None
+    assigned_to_user_id: uuid.UUID | None
+    assigned_to_name: str | None = None
     point_value: int
     status: str
     due_at: datetime | None
@@ -106,7 +107,14 @@ class TaskResponse(BaseModel):
 class AwardPointsRequest(BaseModel):
     user_id: uuid.UUID
     delta: int
-    reason: str = Field(min_length=1)
+    reason: str = Field(min_length=3)
+
+    @field_validator("delta")
+    @classmethod
+    def delta_must_be_nonzero(cls, v: int) -> int:
+        if v == 0:
+            raise ValueError("delta must be non-zero")
+        return v
 
 
 class PointLogResponse(BaseModel):
@@ -121,8 +129,15 @@ class PointLogResponse(BaseModel):
 
 
 class LeaderboardEntry(BaseModel):
+    rank: int
     user_id: uuid.UUID
     full_name: str
     avatar_initials: str
     total_points: int
-    rank: int
+    tasks_completed: int
+
+
+class LeaderboardResponse(BaseModel):
+    club_id: uuid.UUID
+    entries: list[LeaderboardEntry]
+    generated_at: datetime
