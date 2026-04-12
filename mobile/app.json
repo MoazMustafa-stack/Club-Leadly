@@ -33,7 +33,14 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Club Leadly",
+      "shortName": "ClubLeadly",
+      "description": "Manage your club tasks, points & leaderboard",
+      "themeColor": "#4F46E5",
+      "backgroundColor": "#ffffff"
     },
     "plugins": [
       "expo-router",

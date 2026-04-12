@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -76,14 +76,11 @@ class CreateTaskRequest(BaseModel):
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
 
-    @field_validator("due_at", mode="before")
+    @field_validator("due_at", mode="after")
     @classmethod
-    def strip_tz(cls, v: object) -> object:
-        if isinstance(v, datetime) and v.tzinfo is not None:
+    def strip_tz(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is not None:
             return v.replace(tzinfo=None)
-        if isinstance(v, str) and v.endswith(("Z", "+00:00", "+0000")):
-            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
-            return dt.replace(tzinfo=None)
         return v
 
 
@@ -94,14 +91,11 @@ class UpdateTaskRequest(BaseModel):
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
 
-    @field_validator("due_at", mode="before")
+    @field_validator("due_at", mode="after")
     @classmethod
-    def strip_tz(cls, v: object) -> object:
-        if isinstance(v, datetime) and v.tzinfo is not None:
+    def strip_tz(cls, v: datetime | None) -> datetime | None:
+        if v is not None and v.tzinfo is not None:
             return v.replace(tzinfo=None)
-        if isinstance(v, str) and v.endswith(("Z", "+00:00", "+0000")):
-            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
-            return dt.replace(tzinfo=None)
         return v
 
 

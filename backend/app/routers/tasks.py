@@ -190,6 +190,11 @@ async def update_task(
                 detail="User is not a member of this club",
             )
 
+    if "due_at" in update_data and update_data["due_at"] is not None:
+        dt = update_data["due_at"]
+        if dt.tzinfo is not None:
+            update_data["due_at"] = dt.replace(tzinfo=None)
+
     for field, value in update_data.items():
         setattr(task, field, value)
 

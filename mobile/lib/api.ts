@@ -5,6 +5,10 @@ import { tokenStorage } from "./storage";
 import { isTokenExpired } from "../contexts/AuthContext";
 
 function getApiBase(): string {
+  // Production: set EXPO_PUBLIC_API_URL in your hosting environment
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
   if (Platform.OS === "web") return "http://localhost:8000";
   // Derive host from Metro bundler URI (e.g. "172.16.205.36:8081" → "172.16.205.36")
   const hostUri =

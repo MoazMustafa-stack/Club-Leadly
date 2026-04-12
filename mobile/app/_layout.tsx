@@ -1,4 +1,5 @@
 import React from "react";
+import { Platform } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -47,8 +48,9 @@ function RootNavigator() {
     return cleanup;
   }, [router]);
 
-  // Handle notification that launched the app (cold start)
+  // Handle notification that launched the app (cold start — native only)
   React.useEffect(() => {
+    if (Platform.OS === "web") return;
     (async () => {
       const response =
         await Notifications.getLastNotificationResponseAsync();

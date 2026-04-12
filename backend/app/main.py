@@ -1,14 +1,19 @@
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import auth, clubs, notifications, points, tasks
 from .scheduler import scheduler, start_scheduler
 
 load_dotenv()
+
+logger = logging.getLogger("clubleadly")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 @asynccontextmanager
@@ -43,6 +48,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s %s %.0fms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
+
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
@@ -57,5 +77,13 @@ app.include_router(notifications.router)
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["health"])
 async def health_check():
-    """Health check endpoint. Returns {\"status\": \"ok\"} if the server is running."""
-    return {"status": "ok"}
+    """Health check endpoint for Render and uptime monitors."""
+    from .database import async_engine
+    from sqlalchemy import text
+
+    try:
+        async with async_engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "connected"}
+    except Exception:
+        return {"status": "degraded", "db": "unreachable"}

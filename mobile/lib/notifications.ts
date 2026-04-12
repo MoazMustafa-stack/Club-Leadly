@@ -7,13 +7,15 @@ import api from "./api";
 // ---------------------------------------------------------------------------
 // Configure how notifications are handled when the app is in the foreground
 // ---------------------------------------------------------------------------
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Register for push notifications and return the Expo push token
@@ -21,6 +23,9 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
+  // Push notifications are not supported on web
+  if (Platform.OS === "web") return null;
+
   // Push notifications only work on physical devices
   if (!Device.isDevice) {
     console.log("Push notifications require a physical device");
@@ -85,6 +90,9 @@ export async function savePushTokenToServer(token: string): Promise<void> {
 export function useNotificationListeners(
   onNotificationTap?: (data: Record<string, string>) => void
 ) {
+  // No notification listeners on web
+  if (Platform.OS === "web") return () => {};
+
   // Listener for notifications received while app is foregrounded
   const notificationListener =
     Notifications.addNotificationReceivedListener((notification) => {
