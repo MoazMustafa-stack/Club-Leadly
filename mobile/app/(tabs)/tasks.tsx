@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { useTasks } from "../../hooks/useTasks";
 import { useCompleteTask } from "../../hooks/useCompleteTask";
@@ -36,6 +37,18 @@ export default function TasksScreen() {
   const { showToast, ToastComponent } = useToast();
   const [filter, setFilter] = useState<Filter>("all");
   const [showCreate, setShowCreate] = useState(false);
+
+  // Update badge count with pending tasks, clear when screen is focused
+  useEffect(() => {
+    if (!tasks) return;
+    const pendingCount = tasks.filter((t) => t.status === "pending").length;
+    Notifications.setBadgeCountAsync(pendingCount).catch(() => {});
+  }, [tasks]);
+
+  // Clear badge when screen is visible
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(0).catch(() => {});
+  }, []);
 
   const filtered = useMemo(() => {
     if (filter === "all") return tasks;

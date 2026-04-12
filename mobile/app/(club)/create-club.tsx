@@ -8,15 +8,23 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../hooks/useAuth";
 import { Button } from "../../components/ui";
 
 export default function CreateClubScreen() {
-  const { createClub } = useAuth();
+  const { createClub, hasClub } = useAuth();
+  const router = useRouter();
   const [clubName, setClubName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Guard: redirect if user already has a club
+  React.useEffect(() => {
+    if (hasClub) {
+      router.replace("/(tabs)");
+    }
+  }, [hasClub]);
 
   async function handleCreate() {
     setError("");
