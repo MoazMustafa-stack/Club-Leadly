@@ -35,7 +35,7 @@ allowed_origins = [
     "http://localhost:8081",
     "http://localhost:19006",
     "http://localhost:3000",
-    os.getenv("FRONTEND_ORIGIN", ""),
+    os.getenv("FRONTEND_ORIGIN", "").rstrip("/"),
 ]
 allowed_origins = [o for o in allowed_origins if o]
 
