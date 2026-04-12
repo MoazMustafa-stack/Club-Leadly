@@ -104,3 +104,20 @@ class PointLog(Base):
     delta: Mapped[int] = mapped_column(nullable=False)
     reason: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
+# PushToken — one active Expo push token per user per club
+# ---------------------------------------------------------------------------
+
+class PushToken(Base):
+    __tablename__ = "push_tokens"
+    __table_args__ = (UniqueConstraint("user_id", "club_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    club_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clubs.id"), nullable=False)
+    token: Mapped[str] = mapped_column(String, nullable=False)
+    platform: Mapped[str] = mapped_column(String(10), default="unknown")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
