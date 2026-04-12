@@ -8,7 +8,11 @@ load_dotenv()
 
 DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:dev@localhost:5432/clubapp")
 
-async_engine = create_async_engine(DATABASE_URL, echo=False)
+_connect_args: dict = {}
+if "supabase.com" in DATABASE_URL:
+    _connect_args = {"ssl": "require"}
+
+async_engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine,

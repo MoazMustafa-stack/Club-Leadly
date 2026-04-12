@@ -14,7 +14,10 @@ config = context.config
 
 # Set sqlalchemy.url from environment, converting asyncpg → psycopg2 for sync
 raw_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:dev@localhost:5432/clubapp")
-config.set_main_option("sqlalchemy.url", raw_url.replace("+asyncpg", ""))
+sync_url = raw_url.replace("+asyncpg", "")
+if "supabase.com" in sync_url and "sslmode" not in sync_url:
+    sync_url += "?sslmode=require"
+config.set_main_option("sqlalchemy.url", sync_url)
 
 # Python logging
 if config.config_file_name is not None:
