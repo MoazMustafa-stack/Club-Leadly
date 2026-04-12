@@ -3,10 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
-from ..models import Membership, PointLog, Task, TaskStatusEnum
+from ..models import Membership, PointLog, Task, TaskStatusEnum, User
 from ..schemas import CreateTaskRequest, TaskResponse, UpdateTaskRequest
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -22,6 +23,25 @@ def _require_club(current_user: CurrentUser) -> UUID:
     return current_user.club_id
 
 
+def _task_to_response(task: Task, assigned_name: str | None) -> TaskResponse:
+    """Convert a Task ORM object + resolved name into a TaskResponse."""
+    return TaskResponse(
+        id=task.id,
+        club_id=task.club_id,
+        title=task.title,
+        description=task.description,
+        assigned_to_user_id=task.assigned_to_user_id,
+        assigned_to_name=assigned_name,
+        point_value=task.point_value,
+        status=task.status.value if isinstance(task.status, TaskStatusEnum) else task.status,
+        due_at=task.due_at,
+        created_at=task.created_at,
+    )
+
+
+AssignedUser = aliased(User)
+
+
 @router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
     body: CreateTaskRequest,
@@ -31,6 +51,7 @@ async def create_task(
     """Create a new task. Organiser only."""
     club_id = _require_club(current_user)
 
+    assigned_name: str | None = None
     if body.assigned_to_user_id:
         mem = await db.execute(
             select(Membership).where(
@@ -41,8 +62,12 @@ async def create_task(
         if mem.scalar_one_or_none() is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Assigned user is not a member of this club",
+                detail="User is not a member of this club",
             )
+        user_result = await db.execute(
+            select(User.full_name).where(User.id == body.assigned_to_user_id)
+        )
+        assigned_name = user_result.scalar_one_or_none()
 
     task = Task(
         club_id=club_id,
@@ -55,7 +80,7 @@ async def create_task(
     db.add(task)
     await db.commit()
     await db.refresh(task)
-    return task
+    return _task_to_response(task, assigned_name)
 
 
 @router.get("", response_model=list[TaskResponse])
@@ -63,14 +88,28 @@ async def list_tasks(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all tasks in the current club."""
+    """List tasks in the current club.
+
+    Organiser: all tasks, ordered by created_at DESC.
+    Member: only tasks assigned to them, ordered by due_at ASC NULLS LAST.
+    """
     club_id = _require_club(current_user)
-    result = await db.execute(
-        select(Task)
+
+    query = (
+        select(Task, AssignedUser.full_name)
+        .outerjoin(AssignedUser, Task.assigned_to_user_id == AssignedUser.id)
         .where(Task.club_id == club_id)
-        .order_by(Task.created_at.desc())
     )
-    return result.scalars().all()
+
+    if current_user.role == "organiser":
+        query = query.order_by(Task.created_at.desc())
+    else:
+        query = query.where(
+            Task.assigned_to_user_id == current_user.user_id
+        ).order_by(Task.due_at.asc().nulls_last())
+
+    result = await db.execute(query)
+    return [_task_to_response(task, name) for task, name in result.all()]
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
@@ -79,15 +118,27 @@ async def get_task(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a single task by ID (must belong to current club)."""
+    """Get a single task by ID (must belong to current club).
+
+    Members can only view tasks assigned to them.
+    """
     club_id = _require_club(current_user)
     result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.club_id == club_id)
+        select(Task, AssignedUser.full_name)
+        .outerjoin(AssignedUser, Task.assigned_to_user_id == AssignedUser.id)
+        .where(Task.id == task_id, Task.club_id == club_id)
     )
-    task = result.scalar_one_or_none()
-    if task is None:
+    row = result.one_or_none()
+    if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    return task
+
+    task, assigned_name = row
+    if current_user.role != "organiser" and task.assigned_to_user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this resource",
+        )
+    return _task_to_response(task, assigned_name)
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)
@@ -117,7 +168,7 @@ async def update_task(
         if mem.scalar_one_or_none() is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Assigned user is not a member of this club",
+                detail="User is not a member of this club",
             )
 
     for field, value in update_data.items():
@@ -125,16 +176,25 @@ async def update_task(
 
     await db.commit()
     await db.refresh(task)
-    return task
+
+    # Resolve assigned_to_name
+    assigned_name: str | None = None
+    if task.assigned_to_user_id:
+        name_result = await db.execute(
+            select(User.full_name).where(User.id == task.assigned_to_user_id)
+        )
+        assigned_name = name_result.scalar_one_or_none()
+
+    return _task_to_response(task, assigned_name)
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID,
     current_user: CurrentUser = Depends(require_organiser),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a task. Organiser only."""
+    """Delete a task. Organiser only. Cannot delete completed tasks."""
     club_id = _require_club(current_user)
     result = await db.execute(
         select(Task).where(Task.id == task_id, Task.club_id == club_id)
@@ -142,19 +202,26 @@ async def delete_task(
     task = result.scalar_one_or_none()
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.status == TaskStatusEnum.completed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete a completed task",
+        )
     await db.delete(task)
     await db.commit()
+    return {"message": "Task deleted"}
 
 
-@router.post("/{task_id}/complete", response_model=TaskResponse)
+@router.patch("/{task_id}/complete", response_model=TaskResponse)
 async def complete_task(
     task_id: UUID,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark a task as completed. The assigned member or any organiser can call this.
+    """Mark a task as completed. Only the assigned member can call this.
 
-    Automatically awards the task's point_value to the assigned user and logs it.
+    Atomically: sets status to completed, inserts a PointLog, and increments
+    the member's total_points.
     """
     club_id = _require_club(current_user)
     result = await db.execute(
@@ -164,40 +231,46 @@ async def complete_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
+    if task.assigned_to_user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This task is not assigned to you",
+        )
+
     if task.status == TaskStatusEnum.completed:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task already completed",
         )
 
-    is_organiser = current_user.role == "organiser"
-    is_assigned = task.assigned_to_user_id == current_user.user_id
-    if not is_organiser and not is_assigned:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the assigned member or an organiser can complete this task",
-        )
-
+    # Atomic: status + point log + membership points
     task.status = TaskStatusEnum.completed
 
-    # Award points to the assigned user (if one exists)
-    if task.assigned_to_user_id:
-        mem_result = await db.execute(
-            select(Membership).where(
-                Membership.club_id == club_id,
-                Membership.user_id == task.assigned_to_user_id,
-            )
+    mem_result = await db.execute(
+        select(Membership).where(
+            Membership.club_id == club_id,
+            Membership.user_id == current_user.user_id,
         )
-        membership = mem_result.scalar_one_or_none()
-        if membership:
-            membership.total_points += task.point_value
-            db.add(PointLog(
-                club_id=club_id,
-                user_id=task.assigned_to_user_id,
-                delta=task.point_value,
-                reason=f"Completed task: {task.title}",
-            ))
+    )
+    membership = mem_result.scalar_one_or_none()
+    if membership:
+        membership.total_points += task.point_value
+        db.add(PointLog(
+            club_id=club_id,
+            user_id=current_user.user_id,
+            delta=task.point_value,
+            reason=f"Completed task: {task.title}",
+        ))
 
     await db.commit()
     await db.refresh(task)
-    return task
+
+    # Resolve assigned_to_name
+    assigned_name: str | None = None
+    if task.assigned_to_user_id:
+        name_result = await db.execute(
+            select(User.full_name).where(User.id == task.assigned_to_user_id)
+        )
+        assigned_name = name_result.scalar_one_or_none()
+
+    return _task_to_response(task, assigned_name)
