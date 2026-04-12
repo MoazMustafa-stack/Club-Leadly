@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +9,7 @@ from ..auth import create_access_token
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user
 from ..models import Club, Membership, RoleEnum, User
+from ..services.push import notify_member_joined
 from ..schemas import (
     ClubDetailResponse,
     ClubResponse,
@@ -110,6 +112,28 @@ async def join_club(
     )
     db.add(membership)
     await db.commit()
+
+    # Notify the organiser that a new member joined
+    organiser_result = await db.execute(
+        select(Membership).where(
+            Membership.club_id == club.id,
+            Membership.role == RoleEnum.organiser,
+        )
+    )
+    organiser_mem = organiser_result.scalar_one_or_none()
+    user_result = await db.execute(
+        select(User.full_name).where(User.id == current_user.user_id)
+    )
+    joining_name = user_result.scalar_one_or_none() or "Someone"
+    if organiser_mem:
+        asyncio.create_task(
+            notify_member_joined(
+                new_member_name=joining_name,
+                organiser_user_id=str(organiser_mem.user_id),
+                club_id=str(club.id),
+                db=db,
+            )
+        )
 
     token = create_access_token(
         {

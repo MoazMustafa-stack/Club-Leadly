@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +10,7 @@ from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
 from ..models import Membership, PointLog, Task, TaskStatusEnum, User
 from ..schemas import CreateTaskRequest, TaskResponse, UpdateTaskRequest
+from ..services.push import notify_task_assigned
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -84,6 +86,19 @@ async def create_task(
     db.add(task)
     await db.commit()
     await db.refresh(task)
+
+    if body.assigned_to_user_id:
+        asyncio.create_task(
+            notify_task_assigned(
+                task_title=task.title,
+                point_value=task.point_value,
+                assigned_to_user_id=str(task.assigned_to_user_id),
+                club_id=str(club_id),
+                task_id=str(task.id),
+                db=db,
+            )
+        )
+
     return _task_to_response(task, assigned_name)
 
 

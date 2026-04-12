@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from ..schemas import (
     LeaderboardResponse,
     PointLogResponse,
 )
+from ..services.push import notify_points_awarded
 
 router = APIRouter(prefix="/points", tags=["points"])
 
@@ -63,6 +65,17 @@ async def award_points(
     db.add(log)
     await db.commit()
     await db.refresh(log)
+
+    asyncio.create_task(
+        notify_points_awarded(
+            recipient_user_id=str(body.user_id),
+            delta=body.delta,
+            reason=body.reason,
+            club_id=str(club_id),
+            db=db,
+        )
+    )
+
     return log
 
 
