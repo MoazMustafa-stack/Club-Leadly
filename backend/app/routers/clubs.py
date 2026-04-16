@@ -1,5 +1,6 @@
 import asyncio
 import secrets
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
@@ -7,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import create_access_token
 from ..database import get_db
-from ..dependencies import CurrentUser, get_current_user
+from ..dependencies import CurrentUser, get_current_user, require_organiser
 from ..limiter import limiter
 from ..models import Club, Membership, RoleEnum, User
 from ..services.push import notify_member_joined
@@ -241,3 +242,70 @@ async def get_members(
         )
         for m, u in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Member management (organiser only)
+# ---------------------------------------------------------------------------
+
+@router.delete("/members/{user_id}", status_code=status.HTTP_200_OK)
+async def remove_member(
+    user_id: UUID,
+    current_user: CurrentUser = Depends(require_organiser),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a member from the club. Organiser only.
+
+    Cannot remove yourself (the organiser).
+    """
+    _require_club(current_user)
+
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+
+    result = await db.execute(
+        select(Membership).where(
+            Membership.club_id == current_user.club_id,
+            Membership.user_id == user_id,
+        )
+    )
+    membership = result.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Member not found in this club")
+
+    await db.delete(membership)
+    await db.commit()
+    return {"detail": "Member removed"}
+
+
+@router.patch("/members/{user_id}/role", status_code=status.HTTP_200_OK)
+async def promote_member(
+    user_id: UUID,
+    current_user: CurrentUser = Depends(require_organiser),
+    db: AsyncSession = Depends(get_db),
+):
+    """Promote a member to organiser. Organiser only.
+
+    Cannot promote yourself.
+    """
+    _require_club(current_user)
+
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot promote yourself")
+
+    result = await db.execute(
+        select(Membership).where(
+            Membership.club_id == current_user.club_id,
+            Membership.user_id == user_id,
+        )
+    )
+    membership = result.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Member not found in this club")
+
+    if membership.role == RoleEnum.organiser:
+        raise HTTPException(status_code=400, detail="User is already an organiser")
+
+    membership.role = RoleEnum.organiser
+    await db.commit()
+    return {"detail": "Member promoted to organiser"}
