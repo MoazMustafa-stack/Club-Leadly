@@ -176,5 +176,12 @@ class LeaderboardResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class RegisterTokenRequest(BaseModel):
-    push_token: str = Field(min_length=1)
-    platform: str | None = None
+    push_token: str = Field(min_length=1, max_length=200)
+    platform: str | None = Field(default=None, max_length=10)
+
+    @field_validator("push_token")
+    @classmethod
+    def valid_expo_push_token(cls, v: str) -> str:
+        if not v.startswith("ExponentPushToken[") or not v.endswith("]"):
+            raise ValueError("push_token must be a valid ExponentPushToken[…] string")
+        return v
