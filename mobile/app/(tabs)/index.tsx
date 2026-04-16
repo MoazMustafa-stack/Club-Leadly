@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
-  Platform,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -28,6 +29,8 @@ function getEmoji(index: number) {
 export default function DashboardScreen() {
   const { user, logout } = useAuth();
   const isOrganiser = useIsOrganiser();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
   const {
     data,
@@ -59,7 +62,7 @@ export default function DashboardScreen() {
       }
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerLeft}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarEmoji}>{isOrganiser ? "🐳" : "🐷"}</Text>
@@ -119,7 +122,7 @@ export default function DashboardScreen() {
               <View
                 style={[
                   styles.taskCard,
-                  { backgroundColor: index % 2 === 0 ? "#dde3f5" : "#fef3c7" },
+                  { backgroundColor: index % 2 === 0 ? "#dde3f5" : "#fef3c7", width: Math.max(140, (screenWidth - 52) / 2.4) },
                 ]}
               >
                 <Text style={styles.taskTitle} numberOfLines={1}>
@@ -176,7 +179,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 60 : 44,
     paddingBottom: 16,
   },
   headerLeft: {
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "GentiumPlus_400Regular",
     color: "#888",
     marginTop: 2,
@@ -262,7 +264,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   taskCard: {
-    width: 160,
     borderRadius: 14,
     padding: 16,
     marginRight: 12,
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     color: "#5b5b9e",
   },
   taskAssignee: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "GentiumPlus_400Regular",
     color: "#888",
     marginTop: 4,
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   memberMeta: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "GentiumPlus_400Regular",
     color: "#888",
     marginTop: 2,

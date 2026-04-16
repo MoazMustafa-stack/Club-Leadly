@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E7EB",
   },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
-  closeBtn: { fontSize: 20, color: "#6B7280", padding: 4 },
+  closeBtn: { fontSize: 20, color: "#6B7280", padding: 12 },
   form: { flex: 1 },
   formContent: { padding: 20 },
   label: {
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   dropdownItem: {
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#E5E7EB",

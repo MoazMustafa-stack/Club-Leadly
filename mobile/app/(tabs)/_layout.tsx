@@ -18,6 +18,7 @@ export default function TabsLayout() {
           backgroundColor: "#FFFFFF",
           borderTopWidth: 0.5,
           borderTopColor: "#eee",
+          height: 60,
         },
       }}
     >

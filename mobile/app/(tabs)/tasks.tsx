@@ -16,6 +16,7 @@ import { useIsOrganiser } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { deleteTask } from "../../lib/api/tasks";
 import { LoadingScreen } from "../../components/ui";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TaskCard from "../../components/features/TaskCard";
 import CreateTaskSheet from "../../components/features/CreateTaskSheet";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ export default function TasksScreen() {
   const { showToast, ToastComponent } = useToast();
   const [filter, setFilter] = useState<Filter>("all");
   const [showCreate, setShowCreate] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Update badge count with pending tasks, clear when screen is focused
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function TasksScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>
           {isOrganiser ? "All tasks" : "My tasks"}
         </Text>
@@ -183,7 +185,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFAEE" },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 28, fontFamily: "InstrumentSans_700Bold", color: "#111" },

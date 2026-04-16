@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotificationPreferences } from "../hooks/useNotificationPreferences";
 import { LoadingScreen } from "../components/ui";
 
@@ -49,13 +49,14 @@ const LABELS = {
 
 export default function SettingsScreen() {
   const { preferences, isLoading, update } = useNotificationPreferences();
+  const insets = useSafeAreaInsets();
 
   if (isLoading) return <LoadingScreen />;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           hitSlop={12}
@@ -104,10 +105,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "ios" ? 60 : 16,
     paddingBottom: 12,
   },
-  backBtn: { padding: 4 },
+  backBtn: { padding: 8 },
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",

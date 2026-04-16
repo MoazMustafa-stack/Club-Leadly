@@ -39,8 +39,8 @@
       "name": "Club Leadly",
       "shortName": "ClubLeadly",
       "description": "Manage your club tasks, points & leaderboard",
-      "themeColor": "#4F46E5",
-      "backgroundColor": "#ffffff"
+      "themeColor": "#5b5b9e",
+      "backgroundColor": "#FFFAEE"
     },
     "plugins": [
       "expo-router",

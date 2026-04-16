@@ -4,6 +4,9 @@ import time
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -12,8 +15,6 @@ from slowapi import _rate_limit_exceeded_handler
 from .limiter import limiter
 from .routers import auth, clubs, notifications, points, tasks
 from .scheduler import scheduler, start_scheduler
-
-load_dotenv()
 
 logger = logging.getLogger("clubleadly")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -44,6 +45,7 @@ allowed_origins = [
 if os.getenv("ENVIRONMENT", "development") != "production":
     allowed_origins += [
         "http://localhost:8081",
+        "http://localhost:8082",
         "http://localhost:19006",
         "http://localhost:3000",
     ]

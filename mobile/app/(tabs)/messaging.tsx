@@ -1,10 +1,12 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function MessagingScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.content}>
         <View style={styles.iconWrap}>
           <Ionicons name="chatbubbles-outline" size={48} color="#5b5b9e" />
@@ -26,7 +28,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFAEE",
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: Platform.OS === "ios" ? 60 : 24,
   },
   content: { alignItems: "center", paddingHorizontal: 32 },
   iconWrap: {

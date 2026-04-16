@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLeaderboard } from "../../hooks/useLeaderboard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, useIsOrganiser } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { LoadingScreen, Avatar, Badge } from "../../components/ui";
@@ -22,6 +23,7 @@ export default function LeaderboardScreen() {
   const { user } = useAuth();
   const isOrganiser = useIsOrganiser();
   const { showToast, ToastComponent } = useToast();
+  const insets = useSafeAreaInsets();
 
   const [awardTarget, setAwardTarget] = useState<{
     userId: string;
@@ -94,7 +96,7 @@ export default function LeaderboardScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>Leaderboard</Text>
       </View>
 
@@ -143,7 +145,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFAEE" },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 28, fontFamily: "InstrumentSans_700Bold", color: "#111" },
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   },
   rowInfo: { flex: 1, marginLeft: 10 },
   rowName: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  rowMeta: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
+  rowMeta: { fontSize: 13, color: "#9CA3AF", marginTop: 2 },
   rowPts: {
     fontSize: 16,
     fontWeight: "800",
@@ -218,8 +219,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   awardBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
 
   /* Empty */
