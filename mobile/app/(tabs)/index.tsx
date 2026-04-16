@@ -8,6 +8,8 @@ import {
   RefreshControl,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import api from "../../lib/api";
 import type { ClubDetailResponse } from "../../lib/types";
 import { useAuth } from "../../hooks/useAuth";
@@ -36,7 +38,15 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       {/* Club header card */}
       <View style={styles.card}>
-        <Text style={styles.clubName}>{club?.name}</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.clubName}>{club?.name}</Text>
+          <TouchableOpacity
+            onPress={() => router.push("/settings")}
+            hitSlop={12}
+          >
+            <Ionicons name="settings-outline" size={22} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.row}>
           <Badge label={`${data?.total_members ?? 0} members`} />
           <Badge label={`Code: ${club?.join_code}`} variant="purple" />
@@ -94,6 +104,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
     color: "#1F2937",
+    marginBottom: 8,
+    flex: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   row: { flexDirection: "row", gap: 8 },

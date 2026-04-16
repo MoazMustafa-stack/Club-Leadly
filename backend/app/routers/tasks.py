@@ -84,7 +84,7 @@ async def create_task(
         point_value=body.point_value,
         assigned_to_user_id=body.assigned_to_user_id,
         category=body.category,
-        priority=body.priority,
+        priority=PriorityEnum(body.priority) if body.priority else None,
         due_at=due_at,
     )
     db.add(task)

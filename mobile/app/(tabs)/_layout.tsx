@@ -4,6 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 const ACTIVE = "#7C3AED";
 const INACTIVE = "#9CA3AF";
 
+const ENABLE_PROFILE = process.env.EXPO_PUBLIC_ENABLE_PROFILE === "true";
+const ENABLE_MESSAGING = process.env.EXPO_PUBLIC_ENABLE_MESSAGING === "true";
+
 export default function TabsLayout() {
   return (
     <Tabs
@@ -42,6 +45,26 @@ export default function TabsLayout() {
           title: "Leaderboard",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="podium-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messaging"
+        options={{
+          title: "Chat",
+          href: ENABLE_MESSAGING ? "/messaging" : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          href: ENABLE_PROFILE ? "/profile" : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />

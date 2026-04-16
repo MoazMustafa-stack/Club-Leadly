@@ -67,6 +67,8 @@ export interface CreateTaskRequest {
   description?: string;
   point_value?: number;
   assigned_to_user_id?: string;
+  category?: string;
+  priority?: "low" | "medium" | "high";
   due_at?: string;
 }
 
@@ -79,6 +81,8 @@ export interface TaskResponse {
   assigned_to_name: string | null;
   point_value: number;
   status: "pending" | "completed";
+  category: string | null;
+  priority: "low" | "medium" | "high" | null;
   due_at: string | null;
   created_at: string;
 }
@@ -114,4 +118,14 @@ export interface LeaderboardResponse {
   club_id: string;
   entries: LeaderboardEntry[];
   generated_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Notification Preferences
+// ---------------------------------------------------------------------------
+export interface NotificationPreferences {
+  task_assigned: boolean;
+  points_awarded: boolean;
+  task_due_soon: boolean;
+  member_joined: boolean;
 }
