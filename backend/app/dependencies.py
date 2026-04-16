@@ -3,8 +3,12 @@ import uuid
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import decode_access_token
+from .database import get_db
+from .models import RevokedToken
 
 security = HTTPBearer()
 
@@ -18,6 +22,7 @@ class CurrentUser(BaseModel):
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     """Extract and validate the Bearer token, returning the current user context."""
     payload = decode_access_token(credentials.credentials)
@@ -27,6 +32,19 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
+
+    # Check token revocation (logout blacklist)
+    jti = payload.get("jti")
+    if jti:
+        revoked = await db.execute(
+            select(RevokedToken.jti).where(RevokedToken.jti == jti)
+        )
+        if revoked.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked",
+            )
+
     club_id_str = payload.get("club_id")
     return CurrentUser(
         user_id=uuid.UUID(user_id),

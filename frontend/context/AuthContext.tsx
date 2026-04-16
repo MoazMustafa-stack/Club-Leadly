@@ -41,6 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
+    // Best-effort server-side token revocation
+    if (token) {
+      fetch("https://clubleadly-api.onrender.com/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {})
+    }
     setAuthToken(null)
     setTokenState(null)
   }

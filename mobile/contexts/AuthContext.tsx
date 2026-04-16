@@ -158,6 +158,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // Revoke token server-side (best-effort)
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } catch {
+      // Proceed with local cleanup even if server call fails
+    }
     await tokenStorage.remove();
     setToken(null);
     setUser(null);
