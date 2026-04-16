@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -105,6 +105,8 @@ async def create_task(
 async def list_tasks(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     """List tasks in the current club.
 
@@ -126,6 +128,7 @@ async def list_tasks(
             Task.assigned_to_user_id == current_user.user_id
         ).order_by(Task.due_at.asc().nulls_last())
 
+    query = query.limit(limit).offset(offset)
     result = await db.execute(query)
     return [_task_to_response(task, name) for task, name in result.all()]
 

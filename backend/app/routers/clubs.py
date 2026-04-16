@@ -1,7 +1,7 @@
 import asyncio
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -210,6 +210,8 @@ async def get_club_details(
 async def get_members(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     """Get members of the current club for dropdowns, etc.
 
@@ -223,6 +225,8 @@ async def get_members(
         .join(User, Membership.user_id == User.id)
         .where(Membership.club_id == current_user.club_id)
         .order_by(User.full_name.asc())
+        .limit(limit)
+        .offset(offset)
     )
     rows = result.all()
 
