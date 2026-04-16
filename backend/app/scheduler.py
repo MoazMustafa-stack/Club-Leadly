@@ -38,7 +38,6 @@ async def check_due_soon_tasks() -> None:
                     assigned_to_user_id=str(task.assigned_to_user_id),
                     club_id=str(task.club_id),
                     task_id=str(task.id),
-                    db=db,
                 )
             except Exception:
                 logger.exception("Failed to notify due-soon for task %s", task.id)

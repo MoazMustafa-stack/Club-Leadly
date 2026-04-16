@@ -79,7 +79,6 @@ async def award_points(
             delta=body.delta,
             reason=body.reason,
             club_id=str(club_id),
-            db=db,
         )
     )
 

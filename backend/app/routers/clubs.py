@@ -131,7 +131,6 @@ async def join_club(
                 new_member_name=joining_name,
                 organiser_user_id=str(organiser_mem.user_id),
                 club_id=str(club.id),
-                db=db,
             )
         )
 

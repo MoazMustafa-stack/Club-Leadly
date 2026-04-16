@@ -3,8 +3,8 @@ from typing import Literal
 
 import httpx
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import AsyncSessionLocal
 from app.models import PushToken
 
 logger = logging.getLogger(__name__)
@@ -19,22 +19,25 @@ NotificationType = Literal[
 ]
 
 
-async def get_push_tokens_for_users(
+async def _get_push_tokens_for_users(
     user_ids: list[str],
     club_id: str,
-    db: AsyncSession,
 ) -> list[str]:
-    """Return Expo push token strings for the given users in a club."""
+    """Return Expo push token strings for the given users in a club.
+
+    Opens its own DB session so it is safe to call from background tasks.
+    """
     from uuid import UUID
 
     uid_uuids = [UUID(u) for u in user_ids]
-    result = await db.execute(
-        select(PushToken.token).where(
-            PushToken.club_id == UUID(club_id),
-            PushToken.user_id.in_(uid_uuids),
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(PushToken.token).where(
+                PushToken.club_id == UUID(club_id),
+                PushToken.user_id.in_(uid_uuids),
+            )
         )
-    )
-    return list(result.scalars().all())
+        return list(result.scalars().all())
 
 
 async def send_push_notifications(
@@ -90,9 +93,8 @@ async def notify_task_assigned(
     assigned_to_user_id: str,
     club_id: str,
     task_id: str,
-    db: AsyncSession,
 ) -> None:
-    tokens = await get_push_tokens_for_users([assigned_to_user_id], club_id, db)
+    tokens = await _get_push_tokens_for_users([assigned_to_user_id], club_id)
     await send_push_notifications(
         tokens=tokens,
         title="New task assigned",
@@ -106,9 +108,8 @@ async def notify_points_awarded(
     delta: int,
     reason: str,
     club_id: str,
-    db: AsyncSession,
 ) -> None:
-    tokens = await get_push_tokens_for_users([recipient_user_id], club_id, db)
+    tokens = await _get_push_tokens_for_users([recipient_user_id], club_id)
     verb = "awarded" if delta > 0 else "deducted"
     await send_push_notifications(
         tokens=tokens,
@@ -122,9 +123,8 @@ async def notify_member_joined(
     new_member_name: str,
     organiser_user_id: str,
     club_id: str,
-    db: AsyncSession,
 ) -> None:
-    tokens = await get_push_tokens_for_users([organiser_user_id], club_id, db)
+    tokens = await _get_push_tokens_for_users([organiser_user_id], club_id)
     await send_push_notifications(
         tokens=tokens,
         title="New member joined",
@@ -138,9 +138,8 @@ async def notify_task_due_soon(
     assigned_to_user_id: str,
     club_id: str,
     task_id: str,
-    db: AsyncSession,
 ) -> None:
-    tokens = await get_push_tokens_for_users([assigned_to_user_id], club_id, db)
+    tokens = await _get_push_tokens_for_users([assigned_to_user_id], club_id)
     await send_push_notifications(
         tokens=tokens,
         title="Task due soon",

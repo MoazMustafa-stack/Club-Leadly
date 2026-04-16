@@ -95,7 +95,6 @@ async def create_task(
                 assigned_to_user_id=str(task.assigned_to_user_id),
                 club_id=str(club_id),
                 task_id=str(task.id),
-                db=db,
             )
         )
 
