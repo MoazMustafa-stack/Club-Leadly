@@ -5,15 +5,14 @@ import bcrypt
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 
-JWT_SECRET: str = os.getenv("JWT_SECRET", "change_this_to_a_long_random_string")
+JWT_SECRET: str = os.environ["JWT_SECRET"]  # no fallback — crash if missing
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 
-_INSECURE_DEFAULT = "change_this_to_a_long_random_string"
-if JWT_SECRET == _INSECURE_DEFAULT or len(JWT_SECRET) < 32:
-    import logging as _logging
-    _logging.getLogger("clubleadly").warning(
-        "JWT_SECRET is weak or not set. Set a random secret of at least 32 characters in your .env file."
+if len(JWT_SECRET) < 32:
+    raise RuntimeError(
+        "JWT_SECRET must be at least 32 characters. "
+        "Set a long random string in your .env file."
     )
 
 
