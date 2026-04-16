@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased
 
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
-from ..models import Membership, PointLog, Task, TaskStatusEnum, User
+from ..models import Membership, PointLog, PriorityEnum, Task, TaskStatusEnum, User
 from ..schemas import CreateTaskRequest, TaskResponse, UpdateTaskRequest
 from ..services.push import notify_task_assigned
 
@@ -36,6 +36,8 @@ def _task_to_response(task: Task, assigned_name: str | None) -> TaskResponse:
         assigned_to_name=assigned_name,
         point_value=task.point_value,
         status=task.status.value if isinstance(task.status, TaskStatusEnum) else task.status,
+        category=task.category,
+        priority=task.priority.value if task.priority else None,
         due_at=task.due_at,
         created_at=task.created_at,
     )
@@ -81,6 +83,8 @@ async def create_task(
         description=body.description,
         point_value=body.point_value,
         assigned_to_user_id=body.assigned_to_user_id,
+        category=body.category,
+        priority=body.priority,
         due_at=due_at,
     )
     db.add(task)

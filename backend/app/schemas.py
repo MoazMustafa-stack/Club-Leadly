@@ -88,6 +88,8 @@ class CreateTaskRequest(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     point_value: int = Field(default=10, ge=1, le=10000)
     assigned_to_user_id: uuid.UUID | None = None
+    category: str | None = Field(default=None, max_length=50)
+    priority: str | None = Field(default=None, pattern=r"^(low|medium|high)$")
     due_at: datetime | None = None
 
     @field_validator("due_at", mode="after")
@@ -103,6 +105,8 @@ class UpdateTaskRequest(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     point_value: int | None = Field(default=None, ge=1, le=10000)
     assigned_to_user_id: uuid.UUID | None = None
+    category: str | None = Field(default=None, max_length=50)
+    priority: str | None = Field(default=None, pattern=r"^(low|medium|high)$")
     due_at: datetime | None = None
 
     @field_validator("due_at", mode="after")
@@ -122,6 +126,8 @@ class TaskResponse(BaseModel):
     assigned_to_name: str | None = None
     point_value: int
     status: str
+    category: str | None = None
+    priority: str | None = None
     due_at: datetime | None
     created_at: datetime
 

@@ -22,6 +22,12 @@ class TaskStatusEnum(str, enum.Enum):
     completed = "completed"
 
 
+class PriorityEnum(str, enum.Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
 # ---------------------------------------------------------------------------
 # User
 # ---------------------------------------------------------------------------
@@ -87,6 +93,8 @@ class Task(Base):
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     point_value: Mapped[int] = mapped_column(default=10, nullable=False)
     status: Mapped[TaskStatusEnum] = mapped_column(Enum(TaskStatusEnum), default=TaskStatusEnum.pending)
+    category: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    priority: Mapped[PriorityEnum | None] = mapped_column(Enum(PriorityEnum), nullable=True)
     due_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
