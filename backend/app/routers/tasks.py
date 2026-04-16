@@ -255,6 +255,13 @@ async def complete_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
+    # Prevent self-award: task must have an explicit assignee
+    if task.assigned_to_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task must be assigned to a member before it can be completed",
+        )
+
     is_assignee = task.assigned_to_user_id == current_user.user_id
     is_organiser = current_user.role == "organiser"
     if not is_assignee and not is_organiser:
@@ -272,8 +279,8 @@ async def complete_task(
     # Atomic: status + point log + membership points
     task.status = TaskStatusEnum.completed
 
-    # Credit points to the assignee if present, otherwise the completer
-    credit_user_id = task.assigned_to_user_id or current_user.user_id
+    # Always credit the assignee (we ensured assigned_to_user_id is set above)
+    credit_user_id = task.assigned_to_user_id
 
     mem_result = await db.execute(
         select(Membership).where(

@@ -41,6 +41,13 @@ async def award_points(
     """
     club_id = _require_club(current_user)
 
+    # Prevent organiser from awarding points to themselves
+    if body.user_id == current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot award points to yourself",
+        )
+
     mem_result = await db.execute(
         select(Membership).where(
             Membership.club_id == club_id,
