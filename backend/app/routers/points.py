@@ -66,6 +66,7 @@ async def award_points(
     log = PointLog(
         club_id=club_id,
         user_id=body.user_id,
+        awarded_by_user_id=current_user.user_id,
         delta=body.delta,
         reason=body.reason,
     )

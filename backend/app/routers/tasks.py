@@ -300,6 +300,7 @@ async def complete_task(
         db.add(PointLog(
             club_id=club_id,
             user_id=credit_user_id,
+            awarded_by_user_id=current_user.user_id,
             delta=task.point_value,
             reason=f"Completed task: {task.title}",
         ))

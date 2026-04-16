@@ -155,6 +155,7 @@ class PointLogResponse(BaseModel):
     id: uuid.UUID
     club_id: uuid.UUID
     user_id: uuid.UUID
+    awarded_by_user_id: uuid.UUID | None = None
     delta: int
     reason: str
     created_at: datetime
