@@ -185,3 +185,28 @@ class RegisterTokenRequest(BaseModel):
         if not v.startswith("ExponentPushToken[") or not v.endswith("]"):
             raise ValueError("push_token must be a valid ExponentPushToken[…] string")
         return v
+
+
+# ---------------------------------------------------------------------------
+# Password reset schemas
+# ---------------------------------------------------------------------------
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=1, max_length=64)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if not _re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not _re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not _re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v

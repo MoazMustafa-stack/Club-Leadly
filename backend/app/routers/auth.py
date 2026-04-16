@@ -7,8 +7,14 @@ from ..auth import create_access_token, decode_access_token, hash_password, veri
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user
 from ..limiter import limiter
-from ..models import Membership, RevokedToken, User
-from ..schemas import LoginRequest, RegisterRequest, TokenResponse
+from ..models import Membership, PasswordResetToken, RevokedToken, User
+from ..schemas import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -176,3 +182,108 @@ async def refresh_token(
     )
     await db.commit()
     return TokenResponse(access_token=new_token)
+
+
+# ---------------------------------------------------------------------------
+# Password reset
+# ---------------------------------------------------------------------------
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+@limiter.limit("3/hour")
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Request a password reset code.
+
+    Always returns 200 to avoid leaking whether an email is registered.
+    The 6-digit code is valid for 15 minutes.
+    """
+    import secrets
+    from datetime import datetime, timedelta, timezone
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if user is not None:
+        code = secrets.token_hex(3).upper()  # 6 hex chars
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        db.add(PasswordResetToken(
+            user_id=user.id,
+            code=code,
+            expires_at=expires_at,
+        ))
+        await db.commit()
+
+        # Send email (best-effort — log code in dev)
+        import logging
+        import os
+
+        logger = logging.getLogger("password_reset")
+        smtp_host = os.getenv("SMTP_HOST")
+        if smtp_host:
+            from email.message import EmailMessage
+            import aiosmtplib
+
+            msg = EmailMessage()
+            msg["Subject"] = "Club Leadly — Password Reset Code"
+            msg["From"] = os.getenv("SMTP_FROM", "noreply@clubleadly.com")
+            msg["To"] = body.email
+            msg.set_content(
+                f"Your password reset code is: {code}\n\n"
+                "This code expires in 15 minutes. If you didn't request this, "
+                "you can safely ignore this email."
+            )
+            try:
+                await aiosmtplib.send(
+                    msg,
+                    hostname=smtp_host,
+                    port=int(os.getenv("SMTP_PORT", "587")),
+                    username=os.getenv("SMTP_USER"),
+                    password=os.getenv("SMTP_PASS"),
+                    start_tls=True,
+                )
+            except Exception:
+                logger.exception("Failed to send reset email to %s", body.email)
+        else:
+            logger.info("Password reset code for %s: %s (no SMTP configured)", body.email, code)
+
+    return {"detail": "If that email is registered, a reset code has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+@limiter.limit("5/hour")
+async def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset password using the emailed code."""
+    from datetime import datetime, timezone
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    token_result = await db.execute(
+        select(PasswordResetToken)
+        .where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.code == body.code,
+            PasswordResetToken.used == False,  # noqa: E712
+            PasswordResetToken.expires_at > datetime.now(timezone.utc),
+        )
+        .order_by(PasswordResetToken.created_at.desc())
+        .limit(1)
+    )
+    reset_token = token_result.scalar_one_or_none()
+    if reset_token is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    reset_token.used = True
+    user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+
+    return {"detail": "Password has been reset successfully"}
