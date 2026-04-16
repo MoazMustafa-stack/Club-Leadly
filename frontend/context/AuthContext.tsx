@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react"
+import React, { createContext, useContext, useEffect, useState } from "react"
 import { setAuthToken, parseJwt } from "../services/api"
 
 export interface DecodedToken {
@@ -17,10 +17,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
+function isTokenExpired(decoded: DecodedToken & { exp?: number }): boolean {
+  if (!decoded.exp) return false
+  return Date.now() / 1000 > decoded.exp
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null)
 
-  const decoded: DecodedToken | null = token ? parseJwt(token) : null
+  const decoded: (DecodedToken & { exp?: number }) | null = token ? parseJwt(token) : null
+
+  // Auto-clear expired token after each token change
+  useEffect(() => {
+    if (decoded && isTokenExpired(decoded)) {
+      setAuthToken(null)
+      setTokenState(null)
+    }
+  }, [token])
 
   function setToken(t: string) {
     setAuthToken(t)

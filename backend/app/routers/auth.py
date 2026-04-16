@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import create_access_token, hash_password, verify_password
 from ..database import get_db
+from ..limiter import limiter
 from ..models import Membership, User
 from ..schemas import LoginRequest, RegisterRequest, TokenResponse
 
@@ -24,7 +25,8 @@ def _derive_initials(full_name: str) -> str:
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user account.
 
     Anyone can call this. Returns a JWT with club_id=None (user hasn't
@@ -59,7 +61,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Log in with email and password.
 
     Anyone can call this. Returns a JWT containing the user's most recent

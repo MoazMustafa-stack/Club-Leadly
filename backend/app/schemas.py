@@ -1,3 +1,4 @@
+import re as _re
 import uuid
 from datetime import datetime
 
@@ -8,15 +9,28 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 # Auth schemas
 # ---------------------------------------------------------------------------
 
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8)
-    full_name: str = Field(min_length=1)
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if not _re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not _re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not _re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 
 class TokenResponse(BaseModel):
@@ -29,7 +43,7 @@ class TokenResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CreateClubRequest(BaseModel):
-    name: str = Field(min_length=2)
+    name: str = Field(min_length=2, max_length=80)
 
 
 class JoinClubRequest(BaseModel):
@@ -70,9 +84,9 @@ class ClubDetailResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CreateTaskRequest(BaseModel):
-    title: str = Field(min_length=2)
-    description: str | None = None
-    point_value: int = Field(default=10, ge=1)
+    title: str = Field(min_length=2, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    point_value: int = Field(default=10, ge=1, le=10000)
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
 
@@ -85,9 +99,9 @@ class CreateTaskRequest(BaseModel):
 
 
 class UpdateTaskRequest(BaseModel):
-    title: str | None = Field(default=None, min_length=2)
-    description: str | None = None
-    point_value: int | None = Field(default=None, ge=1)
+    title: str | None = Field(default=None, min_length=2, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    point_value: int | None = Field(default=None, ge=1, le=10000)
     assigned_to_user_id: uuid.UUID | None = None
     due_at: datetime | None = None
 
@@ -120,8 +134,8 @@ class TaskResponse(BaseModel):
 
 class AwardPointsRequest(BaseModel):
     user_id: uuid.UUID
-    delta: int
-    reason: str = Field(min_length=3)
+    delta: int = Field(ge=-10000, le=10000)
+    reason: str = Field(min_length=3, max_length=300)
 
     @field_validator("delta")
     @classmethod

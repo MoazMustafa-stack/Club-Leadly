@@ -9,6 +9,13 @@ JWT_SECRET: str = os.getenv("JWT_SECRET", "change_this_to_a_long_random_string")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 
+_INSECURE_DEFAULT = "change_this_to_a_long_random_string"
+if JWT_SECRET == _INSECURE_DEFAULT or len(JWT_SECRET) < 32:
+    import logging as _logging
+    _logging.getLogger("clubleadly").warning(
+        "JWT_SECRET is weak or not set. Set a random secret of at least 32 characters in your .env file."
+    )
+
 
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
