@@ -1,13 +1,14 @@
 import asyncio
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import create_access_token
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user
+from ..limiter import limiter
 from ..models import Club, Membership, RoleEnum, User
 from ..services.push import notify_member_joined
 from ..schemas import (
@@ -73,7 +74,9 @@ async def create_club(
 
 
 @router.post("/join", response_model=TokenResponse)
+@limiter.limit("10/hour")
 async def join_club(
+    request: Request,
     body: JoinClubRequest,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
