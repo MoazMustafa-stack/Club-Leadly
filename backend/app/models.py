@@ -157,3 +157,17 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
+# NotificationPreference — per-user toggles for each notification type
+# ---------------------------------------------------------------------------
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    task_assigned: Mapped[bool] = mapped_column(default=True)
+    points_awarded: Mapped[bool] = mapped_column(default=True)
+    task_due_soon: Mapped[bool] = mapped_column(default=True)
+    member_joined: Mapped[bool] = mapped_column(default=True)

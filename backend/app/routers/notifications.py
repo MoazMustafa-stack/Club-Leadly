@@ -4,8 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user
-from ..models import PushToken
-from ..schemas import RegisterTokenRequest
+from ..models import NotificationPreference, PushToken
+from ..schemas import (
+    NotificationPreferenceResponse,
+    RegisterTokenRequest,
+    UpdateNotificationPreferenceRequest,
+)
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -55,3 +59,47 @@ async def register_token(
 
     await db.commit()
     return {"status": "registered"}
+
+
+@router.get("/preferences", response_model=NotificationPreferenceResponse)
+async def get_notification_preferences(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the current user's notification preferences (defaults to all enabled)."""
+    result = await db.execute(
+        select(NotificationPreference).where(
+            NotificationPreference.user_id == current_user.user_id,
+        )
+    )
+    pref = result.scalar_one_or_none()
+    if pref is None:
+        return NotificationPreferenceResponse()
+    return pref
+
+
+@router.patch("/preferences", response_model=NotificationPreferenceResponse)
+async def update_notification_preferences(
+    body: UpdateNotificationPreferenceRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update notification preferences for the current user (partial update)."""
+    result = await db.execute(
+        select(NotificationPreference).where(
+            NotificationPreference.user_id == current_user.user_id,
+        )
+    )
+    pref = result.scalar_one_or_none()
+
+    if pref is None:
+        pref = NotificationPreference(user_id=current_user.user_id)
+        db.add(pref)
+
+    updates = body.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(pref, field, value)
+
+    await db.commit()
+    await db.refresh(pref)
+    return pref

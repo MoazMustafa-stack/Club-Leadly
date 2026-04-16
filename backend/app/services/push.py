@@ -5,7 +5,7 @@ import httpx
 from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
-from app.models import PushToken
+from app.models import NotificationPreference, PushToken
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,31 @@ async def _get_push_tokens_for_users(
             )
         )
         return list(result.scalars().all())
+
+
+async def _filter_opted_in_users(
+    user_ids: list[str],
+    notification_type: NotificationType,
+) -> list[str]:
+    """Return only user_ids that have the given notification type enabled."""
+    from uuid import UUID
+
+    uid_uuids = [UUID(u) for u in user_ids]
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(NotificationPreference).where(
+                NotificationPreference.user_id.in_(uid_uuids),
+            )
+        )
+        prefs = {str(p.user_id): p for p in result.scalars().all()}
+
+    opted_in = []
+    for uid in user_ids:
+        pref = prefs.get(uid)
+        # No preference row means all defaults (True)
+        if pref is None or getattr(pref, notification_type, True):
+            opted_in.append(uid)
+    return opted_in
 
 
 async def send_push_notifications(
@@ -94,7 +119,10 @@ async def notify_task_assigned(
     club_id: str,
     task_id: str,
 ) -> None:
-    tokens = await _get_push_tokens_for_users([assigned_to_user_id], club_id)
+    opted_in = await _filter_opted_in_users([assigned_to_user_id], "task_assigned")
+    if not opted_in:
+        return
+    tokens = await _get_push_tokens_for_users(opted_in, club_id)
     await send_push_notifications(
         tokens=tokens,
         title="New task assigned",
@@ -109,7 +137,10 @@ async def notify_points_awarded(
     reason: str,
     club_id: str,
 ) -> None:
-    tokens = await _get_push_tokens_for_users([recipient_user_id], club_id)
+    opted_in = await _filter_opted_in_users([recipient_user_id], "points_awarded")
+    if not opted_in:
+        return
+    tokens = await _get_push_tokens_for_users(opted_in, club_id)
     verb = "awarded" if delta > 0 else "deducted"
     await send_push_notifications(
         tokens=tokens,
@@ -124,7 +155,10 @@ async def notify_member_joined(
     organiser_user_id: str,
     club_id: str,
 ) -> None:
-    tokens = await _get_push_tokens_for_users([organiser_user_id], club_id)
+    opted_in = await _filter_opted_in_users([organiser_user_id], "member_joined")
+    if not opted_in:
+        return
+    tokens = await _get_push_tokens_for_users(opted_in, club_id)
     await send_push_notifications(
         tokens=tokens,
         title="New member joined",
@@ -139,7 +173,10 @@ async def notify_task_due_soon(
     club_id: str,
     task_id: str,
 ) -> None:
-    tokens = await _get_push_tokens_for_users([assigned_to_user_id], club_id)
+    opted_in = await _filter_opted_in_users([assigned_to_user_id], "task_due_soon")
+    if not opted_in:
+        return
+    tokens = await _get_push_tokens_for_users(opted_in, club_id)
     await send_push_notifications(
         tokens=tokens,
         title="Task due soon",

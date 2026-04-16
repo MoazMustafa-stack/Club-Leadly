@@ -217,3 +217,23 @@ class ResetPasswordRequest(BaseModel):
         if not _re.search(r"\d", v):
             raise ValueError("Password must contain at least one digit")
         return v
+
+
+# ---------------------------------------------------------------------------
+# Notification preference schemas
+# ---------------------------------------------------------------------------
+
+class NotificationPreferenceResponse(BaseModel):
+    task_assigned: bool = True
+    points_awarded: bool = True
+    task_due_soon: bool = True
+    member_joined: bool = True
+
+    model_config = {"from_attributes": True}
+
+
+class UpdateNotificationPreferenceRequest(BaseModel):
+    task_assigned: bool | None = None
+    points_awarded: bool | None = None
+    task_due_soon: bool | None = None
+    member_joined: bool | None = None
