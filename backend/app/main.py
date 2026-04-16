@@ -95,12 +95,4 @@ app.include_router(notifications.router)
 @app.get("/health", tags=["health"])
 async def health_check():
     """Health check endpoint for Render and uptime monitors."""
-    from .database import async_engine
-    from sqlalchemy import text
-
-    try:
-        async with async_engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return {"status": "ok", "db": "connected"}
-    except Exception:
-        return {"status": "degraded", "db": "unreachable"}
+    return {"status": "ok"}
