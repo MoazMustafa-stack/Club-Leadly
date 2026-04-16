@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useNotificationPreferences } from "../../hooks/useNotificationPreferences";
-import { LoadingScreen } from "../../components/ui";
+import { useNotificationPreferences } from "../hooks/useNotificationPreferences";
+import { LoadingScreen } from "../components/ui";
 
 const PREF_ITEMS: {
   key: keyof typeof LABELS;
