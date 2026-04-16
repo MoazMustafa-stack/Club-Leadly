@@ -25,7 +25,7 @@ def _derive_initials(full_name: str) -> str:
 
 
 @router.post("/register", response_model=TokenResponse)
-@limiter.limit("10/minute")
+@limiter.limit("10/hour")
 async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user account.
 
