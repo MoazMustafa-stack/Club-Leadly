@@ -2,21 +2,23 @@ import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLeaderboard } from "../../hooks/useLeaderboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth, useIsOrganiser } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
-import { LoadingScreen, Avatar, Badge } from "../../components/ui";
+import { LoadingScreen } from "../../components/ui";
 import AwardPointsSheet from "../../components/features/AwardPointsSheet";
 import { Button } from "../../components/ui";
 import type { LeaderboardEntry } from "../../lib/types";
 
-const MEDAL = ["🥇", "🥈", "🥉"] as const;
+const EMOJI_AVATARS = ["🐷", "👾", "🐮", "🐱", "🐨", "🐶", "🐭", "🐱", "🐨", "🐮", "👾"];
+const MEDAL_COLORS: Record<number, string> = { 1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32" };
 
 export default function LeaderboardScreen() {
   const { leaderboard, isLoading, refetch } = useLeaderboard();
@@ -30,100 +32,99 @@ export default function LeaderboardScreen() {
     fullName: string;
   } | null>(null);
 
-  const renderTopThree = useCallback(
-    (entry: LeaderboardEntry, idx: number) => {
-      const isMe = entry.user_id === user?.sub;
-      return (
-        <View key={entry.user_id} style={[styles.podiumItem, isMe && styles.podiumHighlight]}>
-          <Text style={styles.medal}>{MEDAL[idx]}</Text>
-          <Avatar initials={entry.avatar_initials} colorSeed={entry.full_name} size="lg" />
-          <Text style={styles.podiumName} numberOfLines={1}>
-            {entry.full_name}
-          </Text>
-          <Text style={styles.podiumPts}>{entry.total_points} pts</Text>
-          <Badge
-            label={`${entry.tasks_completed} tasks`}
-            variant="purple"
-          />
-        </View>
-      );
-    },
-    [user?.sub]
-  );
-
-  const renderRow = useCallback(
-    ({ item }: { item: LeaderboardEntry }) => {
-      const isMe = item.user_id === user?.sub;
-      return (
-        <View style={[styles.row, isMe && styles.rowHighlight]}>
-          <Text style={styles.rank}>#{item.rank}</Text>
-          <Avatar initials={item.avatar_initials} colorSeed={item.full_name} size="sm" />
-          <View style={styles.rowInfo}>
-            <Text style={styles.rowName} numberOfLines={1}>
-              {item.full_name}
-              {isMe ? " (You)" : ""}
-            </Text>
-            <Text style={styles.rowMeta}>
-              {item.tasks_completed} tasks completed
-            </Text>
-          </View>
-          <Text style={styles.rowPts}>{item.total_points}</Text>
-          {isOrganiser && (
-            <Button
-              title="Award"
-              variant="secondary"
-              onPress={() =>
-                setAwardTarget({
-                  userId: item.user_id,
-                  fullName: item.full_name,
-                })
-              }
-              style={styles.awardBtn}
-            />
-          )}
-        </View>
-      );
-    },
-    [user?.sub, isOrganiser]
-  );
-
   if (isLoading) return <LoadingScreen />;
 
   const entries = leaderboard?.entries ?? [];
-  const topThree = entries.slice(0, 3);
-  const rest = entries.slice(3);
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-      </View>
-
-      <FlatList
-        data={rest}
-        keyExtractor={(item) => item.user_id}
-        renderItem={renderRow}
-        contentContainerStyle={styles.list}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refetch} />
+          <RefreshControl refreshing={false} onRefresh={refetch} tintColor="#5b5b9e" />
         }
-        ListHeaderComponent={
-          topThree.length > 0 ? (
-            <View style={styles.podiumRow}>
-              {topThree.map((e, i) => renderTopThree(e, i))}
-            </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          topThree.length === 0 ? (
-            <View style={styles.empty}>
-              <Ionicons name="trophy-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No points earned yet</Text>
-            </View>
-          ) : null
-        }
-      />
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <View style={[styles.headerArea, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.avatarBubble}>
+            <Text style={{ fontSize: 22 }}>🐷</Text>
+          </View>
+
+          <View style={styles.titleRow}>
+            <Text style={styles.medalBig}>🏅</Text>
+            <Text style={styles.pageTitle}>Leader Board</Text>
+          </View>
+        </View>
+
+        {/* List card */}
+        {entries.length > 0 ? (
+          <View style={styles.card}>
+            {entries.map((entry, i) => {
+              const isMe = entry.user_id === user?.sub;
+              const rank = entry.rank;
+              return (
+                <View
+                  key={entry.user_id}
+                  style={[
+                    styles.row,
+                    i < entries.length - 1 && styles.rowBorder,
+                    isMe && styles.rowHighlight,
+                  ]}
+                >
+                  {/* Rank */}
+                  <View style={styles.rankCol}>
+                    {rank <= 3 ? (
+                      <Text style={[styles.medalIcon, { color: MEDAL_COLORS[rank] }]}>🏅</Text>
+                    ) : (
+                      <Text style={[styles.rankNum, rank >= 7 && { color: "#ef4444" }]}>
+                        {rank}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Avatar */}
+                  <View style={styles.avatarCircle}>
+                    <Text style={{ fontSize: 22 }}>
+                      {EMOJI_AVATARS[(i) % EMOJI_AVATARS.length]}
+                    </Text>
+                  </View>
+
+                  {/* Info */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>
+                      {entry.full_name}{isMe ? " (You)" : ""}
+                    </Text>
+                    <Text style={styles.stats}>
+                      {entry.tasks_completed} tasks · {entry.total_points} pts
+                    </Text>
+                  </View>
+
+                  {/* Award button for organiser */}
+                  {isOrganiser && (
+                    <Button
+                      title="Award"
+                      variant="secondary"
+                      onPress={() =>
+                        setAwardTarget({
+                          userId: entry.user_id,
+                          fullName: entry.full_name,
+                        })
+                      }
+                      style={styles.awardBtn}
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Ionicons name="trophy-outline" size={48} color="#D1D5DB" />
+            <Text style={styles.emptyText}>No points earned yet</Text>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Award points sheet */}
       <AwardPointsSheet
@@ -142,88 +143,109 @@ export default function LeaderboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFAEE" },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  headerTitle: { fontSize: 28, fontFamily: "InstrumentSans_700Bold", color: "#111" },
-
-  /* Podium */
-  podiumRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 16,
-    marginBottom: 8,
-  },
-  podiumItem: {
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
-    width: 100,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  podiumHighlight: {
-    borderColor: "#5b5b9e",
-    borderWidth: 2,
+  container: {
+    flex: 1,
     backgroundColor: "#FFFAEE",
   },
-  medal: { fontSize: 24, marginBottom: 4 },
-  podiumName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 6,
+  headerArea: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  avatarBubble: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#e5e0d5",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginBottom: 12,
+  },
+  titleRow: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  medalBig: {
+    fontSize: 36,
     textAlign: "center",
   },
-  podiumPts: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#5b5b9e",
-    marginTop: 2,
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#111",
+    fontFamily: "InstrumentSans_700Bold",
+    textAlign: "center",
   },
-
-  /* Rows */
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  card: {
+    marginHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: "#ddd",
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   rowHighlight: {
-    borderColor: "#5b5b9e",
-    borderWidth: 2,
-    backgroundColor: "#FFFAEE",
+    backgroundColor: "#f5f4ff",
   },
-  rank: {
+  rankCol: {
+    width: 32,
+    alignItems: "center",
+  },
+  medalIcon: {
+    fontSize: 22,
+  },
+  rankNum: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    fontFamily: "InstrumentSans_700Bold",
+  },
+  avatarCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  name: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#6B7280",
-    width: 32,
+    color: "#111",
+    fontFamily: "InstrumentSans_700Bold",
   },
-  rowInfo: { flex: 1, marginLeft: 10 },
-  rowName: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  rowMeta: { fontSize: 13, color: "#9CA3AF", marginTop: 2 },
-  rowPts: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#5b5b9e",
-    marginRight: 8,
+  stats: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 2,
+    fontFamily: "GentiumPlus_400Regular",
   },
   awardBtn: {
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-
-  /* Empty */
-  empty: { alignItems: "center", marginTop: 80 },
-  emptyText: { color: "#9CA3AF", fontSize: 16, marginTop: 12 },
+  empty: {
+    alignItems: "center",
+    marginTop: 80,
+  },
+  emptyText: {
+    color: "#9CA3AF",
+    fontSize: 16,
+    marginTop: 12,
+    fontFamily: "GentiumPlus_400Regular",
+  },
 });

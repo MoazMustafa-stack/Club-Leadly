@@ -9,6 +9,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Alert,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -225,26 +226,34 @@ export default function DashboardScreen() {
       {/* Leave Club */}
       <TouchableOpacity
         style={styles.leaveBtn}
-        onPress={() =>
-          Alert.alert(
-            "Leave Club",
-            "Are you sure you want to leave this club? Your points and task history will be lost.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Leave",
-                style: "destructive",
-                onPress: async () => {
-                  try {
-                    await leaveClub();
-                  } catch (e: any) {
-                    Alert.alert("Error", e?.message || "Failed to leave club");
-                  }
-                },
-              },
-            ]
-          )
-        }
+        onPress={() => {
+          const doLeave = async () => {
+            try {
+              await leaveClub();
+            } catch (e: any) {
+              const msg = e?.message || "Failed to leave club";
+              if (Platform.OS === "web") {
+                window.alert(msg);
+              } else {
+                Alert.alert("Error", msg);
+              }
+            }
+          };
+          if (Platform.OS === "web") {
+            if (window.confirm("Are you sure you want to leave this club? Your points and task history will be lost.")) {
+              doLeave();
+            }
+          } else {
+            Alert.alert(
+              "Leave Club",
+              "Are you sure you want to leave this club? Your points and task history will be lost.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Leave", style: "destructive", onPress: doLeave },
+              ]
+            );
+          }
+        }}
       >
         <Text style={styles.leaveText}>Leave Club</Text>
       </TouchableOpacity>
