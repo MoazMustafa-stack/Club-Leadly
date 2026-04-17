@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import api from "../../lib/api";
@@ -32,6 +32,7 @@ export default function DashboardScreen() {
   const isOrganiser = useIsOrganiser();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const queryClient = useQueryClient();
 
   const {
     data,
@@ -45,6 +46,30 @@ export default function DashboardScreen() {
   });
 
   const { tasks } = useTasks();
+
+  const handlePromote = useCallback((userId: string, name: string) => {
+    const doPromote = async () => {
+      try {
+        await api(`/clubs/members/${userId}/role`, { method: "PATCH" });
+        queryClient.invalidateQueries({ queryKey: ["club-detail"] });
+      } catch (e: any) {
+        const msg = e?.message || "Failed to promote member";
+        if (Platform.OS === "web") {
+          window.alert(msg);
+        } else {
+          Alert.alert("Error", msg);
+        }
+      }
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(`Promote ${name} to organiser?`)) doPromote();
+    } else {
+      Alert.alert("Promote Member", `Promote ${name} to organiser?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Promote", onPress: doPromote },
+      ]);
+    }
+  }, [queryClient]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -208,6 +233,15 @@ export default function DashboardScreen() {
                 {member.role} · {member.total_points} pts
               </Text>
             </View>
+            {isOrganiser && member.role !== "organiser" && member.user_id !== user?.sub && (
+              <TouchableOpacity
+                style={styles.promoteBtn}
+                onPress={() => handlePromote(member.user_id, member.full_name)}
+              >
+                <Ionicons name="arrow-up-circle-outline" size={16} color="#5b5b9e" />
+                <Text style={styles.promoteBtnText}>Promote</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ))}
         {members.length === 0 && (
@@ -479,6 +513,20 @@ const styles = StyleSheet.create({
     fontFamily: "GentiumPlus_400Regular",
     color: "#888",
     marginTop: 2,
+  },
+  promoteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eeedf8",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    gap: 4,
+  },
+  promoteBtnText: {
+    fontSize: 12,
+    fontFamily: "InstrumentSans_700Bold",
+    color: "#5b5b9e",
   },
   empty: {
     textAlign: "center",
