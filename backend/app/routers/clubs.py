@@ -22,7 +22,7 @@ from ..schemas import (
     TokenResponse,
 )
 
-router = APIRouter(prefix=\"/clubs\", tags=[\"clubs\"])
+router = APIRouter(prefix="/clubs", tags=["clubs"])
 
 
 @router.post("", response_model=TokenResponse)
