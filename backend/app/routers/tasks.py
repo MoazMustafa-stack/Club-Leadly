@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased
 
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
-from ..models import Membership, PointLog, PriorityEnum, Task, TaskStatusEnum, User
+from ..models import ActivityLog, ActivityTypeEnum, Membership, PointLog, PriorityEnum, Task, TaskStatusEnum, User
 from ..schemas import CreateTaskRequest, TaskResponse, UpdateTaskRequest
 from ..services.push import notify_task_assigned
 
@@ -304,6 +304,17 @@ async def complete_task(
             delta=task.point_value,
             reason=f"Completed task: {task.title}",
         ))
+
+    # Fetch completer name for activity description
+    completer_result = await db.execute(select(User.full_name).where(User.id == credit_user_id))
+    completer_name = completer_result.scalar_one_or_none() or "Unknown"
+    db.add(ActivityLog(
+        club_id=club_id,
+        user_id=credit_user_id,
+        activity_type=ActivityTypeEnum.task_completed,
+        description=f"{completer_name} completed task: {task.title} (+{task.point_value} pts)",
+        target_user_id=None,
+    ))
 
     await db.commit()
     await db.refresh(task)

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
-from ..models import Membership, PointLog, Task, TaskStatusEnum, User
+from ..models import ActivityLog, ActivityTypeEnum, Membership, PointLog, Task, TaskStatusEnum, User
 from ..schemas import (
     AwardPointsRequest,
     LeaderboardEntry,
@@ -71,6 +71,25 @@ async def award_points(
         reason=body.reason,
     )
     db.add(log)
+
+    # Fetch names for activity description
+    awarder_result = await db.execute(select(User.full_name).where(User.id == current_user.user_id))
+    awarder_name = awarder_result.scalar_one_or_none() or "Unknown"
+    recipient_result = await db.execute(select(User.full_name).where(User.id == body.user_id))
+    recipient_name = recipient_result.scalar_one_or_none() or "Unknown"
+
+    sign = "+" if body.delta >= 0 else ""
+    desc = f"{awarder_name} awarded {recipient_name} {sign}{body.delta} pts"
+    if body.reason:
+        desc += f": {body.reason}"
+    db.add(ActivityLog(
+        club_id=club_id,
+        user_id=current_user.user_id,
+        activity_type=ActivityTypeEnum.points_awarded,
+        description=desc,
+        target_user_id=body.user_id,
+    ))
+
     await db.commit()
     await db.refresh(log)
 
