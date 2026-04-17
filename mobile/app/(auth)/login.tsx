@@ -10,82 +10,67 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { useAuth } from "../../hooks/useAuth";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-// Floating animated dots — matches frontend's SignIn design
-interface DotConfig {
-  size: number;
-  color: string;
-  left: number;
-  top: number;
-  delay: number;
-}
-
-const DOT_CONFIGS: DotConfig[] = [
-  { size: 18, color: "#dcd7ca", left: 40, top: 60, delay: 0 },
-  { size: 12, color: "#c5bfb0", left: 200, top: 100, delay: 400 },
-  { size: 22, color: "#b6b09f", left: 120, top: 180, delay: 800 },
-  { size: 10, color: "#e5e0d5", left: 300, top: 50, delay: 200 },
-  { size: 16, color: "#d4cfc0", left: 60, top: 300, delay: 600 },
-  { size: 14, color: "#c5bfb0", left: 260, top: 250, delay: 1000 },
-  { size: 20, color: "#dcd7ca", left: 180, top: 400, delay: 300 },
-  { size: 8, color: "#e5e0d5", left: 320, top: 350, delay: 700 },
-  { size: 15, color: "#b6b09f", left: 30, top: 500, delay: 500 },
-  { size: 11, color: "#d4cfc0", left: 280, top: 470, delay: 900 },
-  { size: 18, color: "#c5bfb0", left: 150, top: 550, delay: 100 },
-  { size: 13, color: "#dcd7ca", left: 90, top: 150, delay: 1100 },
-  { size: 9, color: "#e5e0d5", left: 340, top: 180, delay: 350 },
-  { size: 17, color: "#b6b09f", left: 220, top: 320, delay: 750 },
+const dots = [
+  { top: 0.03, left: 0.10, delay: 0 },
+  { top: 0.03, left: 0.80, delay: 500 },
+  { top: 0.10, left: 0.45, delay: 300 },
+  { top: 0.10, left: 0.88, delay: 800 },
+  { top: 0.18, left: 0.05, delay: 600 },
+  { top: 0.18, left: 0.70, delay: 400 },
+  { top: 0.25, left: 0.30, delay: 1000 },
+  { top: 0.25, left: 0.88, delay: 700 },
+  { top: 0.33, left: 0.08, delay: 1200 },
+  { top: 0.33, left: 0.75, delay: 900 },
+  { top: 0.40, left: 0.50, delay: 500 },
+  { top: 0.48, left: 0.05, delay: 300 },
+  { top: 0.48, left: 0.88, delay: 1100 },
+  { top: 0.55, left: 0.25, delay: 800 },
+  { top: 0.55, left: 0.70, delay: 400 },
+  { top: 0.63, left: 0.08, delay: 1300 },
+  { top: 0.63, left: 0.82, delay: 600 },
+  { top: 0.70, left: 0.40, delay: 200 },
+  { top: 0.78, left: 0.12, delay: 900 },
+  { top: 0.78, left: 0.75, delay: 1000 },
+  { top: 0.90, left: 0.50, delay: 700 },
+  { top: 0.85, left: 0.88, delay: 300 },
+  { top: 0.92, left: 0.34, delay: 1100 },
+  { top: 0.98, left: 0.60, delay: 500 },
+  { top: 0.96, left: 0.88, delay: 200 },
+  { top: 0.99, left: 0.05, delay: 600 },
+  { top: 0.59, left: 0.95, delay: 600 },
+  { top: 0.74, left: 0.02, delay: 600 },
 ];
 
-function FloatingDot({ config }: { config: DotConfig }) {
+function FloatingDot({ top, left, delay }: { top: number; left: number; delay: number }) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const animation = Animated.loop(
+    Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 3000 + Math.random() * 2000,
-          delay: config.delay,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim, {
-          toValue: 0,
-          duration: 3000 + Math.random() * 2000,
-          useNativeDriver: true,
-        }),
+        Animated.timing(anim, { toValue: -14, duration: 2000, delay, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 2000, useNativeDriver: true }),
       ])
-    );
-    animation.start();
-    return () => animation.stop();
+    ).start();
   }, []);
-
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20 - Math.random() * 15],
-  });
-
-  const opacity = anim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.3, 0.7, 0.3],
-  });
 
   return (
     <Animated.View
       style={{
         position: "absolute",
-        left: config.left % (SCREEN_WIDTH - 20),
-        top: config.top % (SCREEN_HEIGHT - 20),
-        width: config.size,
-        height: config.size,
-        borderRadius: config.size / 2,
-        backgroundColor: config.color,
-        transform: [{ translateY }],
-        opacity,
+        top: top * height,
+        left: left * width,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: "#5b5b9e",
+        opacity: 0.35,
+        transform: [{ translateY: anim }],
       }}
     />
   );
@@ -131,10 +116,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      {/* Animated floating dots background */}
-      {DOT_CONFIGS.map((config, i) => (
-        <FloatingDot key={i} config={config} />
+    <SafeAreaView style={styles.root}>
+      {dots.map((d, i) => (
+        <FloatingDot key={i} top={d.top} left={d.left} delay={d.delay} />
       ))}
 
       <KeyboardAvoidingView
@@ -145,37 +129,39 @@ export default function LoginScreen() {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo */}
           <Text style={styles.logo}>Leadly</Text>
-          <Text style={styles.tagline}>
-            {mode === "login"
-              ? "Welcome back! Sign in to continue."
-              : "Create your account to get started."}
-          </Text>
 
-          {/* Mode toggle */}
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === "login" && styles.toggleActive]}
-              onPress={() => { setMode("login"); setError(""); }}
-            >
-              <Text style={[styles.toggleText, mode === "login" && styles.toggleTextActive]}>
-                Login
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === "register" && styles.toggleActive]}
-              onPress={() => { setMode("register"); setError(""); }}
-            >
-              <Text style={[styles.toggleText, mode === "register" && styles.toggleTextActive]}>
-                Register
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Form card */}
           <View style={styles.card}>
+            <Text style={styles.title}>
+              {mode === "login" ? "Welcome back" : "Create an account"}
+            </Text>
+            <Text style={styles.subtitle}>
+              {mode === "login"
+                ? "Sign in to continue"
+                : "Enter your details to sign up"}
+            </Text>
+
             {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            {/* Mode toggle */}
+            <View style={styles.roleRow}>
+              <TouchableOpacity
+                style={[styles.roleBtn, mode === "login" && styles.roleBtnActive]}
+                onPress={() => { setMode("login"); setError(""); }}
+              >
+                <Text style={[styles.roleBtnText, mode === "login" && styles.roleBtnTextActive]}>
+                  Login
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.roleBtn, mode === "register" && styles.roleBtnActive]}
+                onPress={() => { setMode("register"); setError(""); }}
+              >
+                <Text style={[styles.roleBtnText, mode === "register" && styles.roleBtnTextActive]}>
+                  Register
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {mode === "register" && (
               <TextInput
@@ -186,15 +172,17 @@ export default function LoginScreen() {
                 onChangeText={setFullName}
               />
             )}
+
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="email@domain.com"
               placeholderTextColor="#aaa"
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
             />
+
             <TextInput
               style={styles.input}
               placeholder={mode === "register" ? "Password (min 8 chars)" : "Password"}
@@ -205,23 +193,41 @@ export default function LoginScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+              style={[styles.continueBtn, loading && { opacity: 0.6 }]}
               onPress={handleSubmit}
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Text style={styles.submitText}>
-                {loading
-                  ? "Please wait..."
-                  : mode === "login"
-                  ? "Sign In"
-                  : "Create Account"}
+              <Text style={styles.continueBtnText}>
+                {loading ? "Please wait..." : "Continue"}
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.line} />
+              <Text style={styles.orText}>or</Text>
+              <View style={styles.line} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.switchBtn}
+              onPress={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}
+            >
+              <Text style={styles.switchBtnText}>
+                {mode === "login" ? "Create a new account" : "Already have an account? Sign in"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.terms}>
+              By clicking continue, you agree to our{" "}
+              <Text style={styles.termsLink}>Terms of Service</Text>
+              {" "}and{" "}
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -229,61 +235,46 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#f0efe6",
+    justifyContent: "center",
   },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingBottom: 40,
   },
   logo: {
-    fontSize: 48,
+    fontSize: 52,
+    fontWeight: "700",
+    color: "#2d2d6b",
+    textAlign: "center",
+    marginBottom: 32,
     fontFamily: "InriaSerif_700Bold",
-    color: "#2e2e6e",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  tagline: {
-    fontSize: 15,
-    fontFamily: "GentiumPlus_400Regular",
-    color: "#888",
-    textAlign: "center",
-    marginBottom: 28,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignSelf: "center",
-    backgroundColor: "#e5e0d5",
-    borderRadius: 25,
-    padding: 3,
-    marginBottom: 24,
-  },
-  toggleBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    borderRadius: 22,
-  },
-  toggleActive: {
-    backgroundColor: "#5b5b9e",
-  },
-  toggleText: {
-    fontSize: 15,
-    fontFamily: "InstrumentSans_700Bold",
-    color: "#888",
-  },
-  toggleTextActive: {
-    color: "#fff",
   },
   card: {
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 24,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    textAlign: "center",
+    marginBottom: 6,
+    fontFamily: "InstrumentSans_700Bold",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+    fontFamily: "GentiumPlus_400Regular",
   },
   error: {
     color: "#DC2626",
@@ -292,28 +283,95 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "GentiumPlus_400Regular",
   },
+  roleRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  roleBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    backgroundColor: "#fafafa",
+  },
+  roleBtnActive: {
+    borderColor: "#5b5b9e",
+    backgroundColor: "#eeeef8",
+  },
+  roleBtnText: {
+    fontSize: 14,
+    color: "#aaa",
+    fontWeight: "600",
+    fontFamily: "InstrumentSans_700Bold",
+  },
+  roleBtnTextActive: {
+    color: "#5b5b9e",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-    color: "#111",
-    backgroundColor: "#f0f0fa",
+    padding: 14,
+    fontSize: 15,
+    color: "#333",
+    marginBottom: 14,
     fontFamily: "GentiumPlus_400Regular",
   },
-  submitBtn: {
+  continueBtn: {
     backgroundColor: "#5b5b9e",
     borderRadius: 12,
-    paddingVertical: 15,
+    padding: 15,
     alignItems: "center",
-    marginTop: 8,
+    marginBottom: 20,
   },
-  submitText: {
+  continueBtnText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "600",
     fontFamily: "InstrumentSans_700Bold",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#eee",
+  },
+  orText: {
+    marginHorizontal: 10,
+    color: "#aaa",
+    fontSize: 13,
+  },
+  switchBtn: {
+    backgroundColor: "#fdf6ec",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 12,
+    padding: 13,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  switchBtnText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#111",
+    fontFamily: "InstrumentSans_400Regular",
+  },
+  terms: {
+    fontSize: 12,
+    color: "#aaa",
+    textAlign: "center",
+    marginTop: 10,
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: "#333",
+    fontWeight: "600",
   },
 });
