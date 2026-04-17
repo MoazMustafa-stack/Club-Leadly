@@ -179,6 +179,22 @@ class LeaderboardResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Activity schemas
+# ---------------------------------------------------------------------------
+
+class ActivityLogResponse(BaseModel):
+    id: uuid.UUID
+    club_id: uuid.UUID
+    user_id: uuid.UUID
+    user_name: str
+    activity_type: str
+    description: str
+    target_user_id: uuid.UUID | None = None
+    target_user_name: str | None = None
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Notification schemas
 # ---------------------------------------------------------------------------
 

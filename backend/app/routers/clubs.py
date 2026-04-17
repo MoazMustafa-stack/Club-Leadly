@@ -10,9 +10,10 @@ from ..auth import create_access_token
 from ..database import get_db
 from ..dependencies import CurrentUser, get_current_user, require_organiser
 from ..limiter import limiter
-from ..models import Club, Membership, RoleEnum, User
+from ..models import ActivityLog, ActivityTypeEnum, Club, Membership, RoleEnum, User
 from ..services.push import notify_member_joined
 from ..schemas import (
+    ActivityLogResponse,
     ClubDetailResponse,
     ClubResponse,
     CreateClubRequest,
@@ -21,7 +22,7 @@ from ..schemas import (
     TokenResponse,
 )
 
-router = APIRouter(prefix="/clubs", tags=["clubs"])
+router = APIRouter(prefix=\"/clubs\", tags=[\"clubs\"])
 
 
 @router.post("", response_model=TokenResponse)
@@ -117,6 +118,19 @@ async def join_club(
     db.add(membership)
     await db.commit()
 
+    # Log the join activity
+    user_result_name = await db.execute(
+        select(User.full_name).where(User.id == current_user.user_id)
+    )
+    joining_name_for_log = user_result_name.scalar_one_or_none() or "Someone"
+    db.add(ActivityLog(
+        club_id=club.id,
+        user_id=current_user.user_id,
+        activity_type=ActivityTypeEnum.member_joined,
+        description=f"{joining_name_for_log} joined the club",
+    ))
+    await db.commit()
+
     # Notify the organiser that a new member joined
     organiser_result = await db.execute(
         select(Membership).where(
@@ -196,6 +210,18 @@ async def leave_club(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You are the only organiser. Promote another member before leaving.",
             )
+
+    # Log leave activity before deleting membership
+    leave_name_result = await db.execute(
+        select(User.full_name).where(User.id == current_user.user_id)
+    )
+    leave_name = leave_name_result.scalar_one_or_none() or "Someone"
+    db.add(ActivityLog(
+        club_id=current_user.club_id,
+        user_id=current_user.user_id,
+        activity_type=ActivityTypeEnum.member_left,
+        description=f"{leave_name} left the club",
+    ))
 
     await db.delete(membership)
     await db.commit()
@@ -359,5 +385,67 @@ async def promote_member(
         raise HTTPException(status_code=400, detail="User is already an organiser")
 
     membership.role = RoleEnum.organiser
+
+    # Log promote activity
+    promoter_result = await db.execute(
+        select(User.full_name).where(User.id == current_user.user_id)
+    )
+    promoter_name = promoter_result.scalar_one_or_none() or "An organiser"
+    promoted_result = await db.execute(
+        select(User.full_name).where(User.id == user_id)
+    )
+    promoted_name = promoted_result.scalar_one_or_none() or "a member"
+    db.add(ActivityLog(
+        club_id=current_user.club_id,
+        user_id=current_user.user_id,
+        activity_type=ActivityTypeEnum.member_promoted,
+        description=f"{promoter_name} promoted {promoted_name} to organiser",
+        target_user_id=user_id,
+    ))
+
     await db.commit()
     return {"detail": "Member promoted to organiser"}
+
+
+# ---------------------------------------------------------------------------
+# Activity feed
+# ---------------------------------------------------------------------------
+
+@router.get("/me/activity", response_model=list[ActivityLogResponse])
+async def get_activity_feed(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+):
+    """Get the activity feed for the current club."""
+    _require_club(current_user)
+
+    # Alias for target user join
+    TargetUser = User.__table__.alias("target_user")
+
+    result = await db.execute(
+        select(ActivityLog, User.full_name, TargetUser.c.full_name)
+        .join(User, ActivityLog.user_id == User.id)
+        .outerjoin(TargetUser, ActivityLog.target_user_id == TargetUser.c.id)
+        .where(ActivityLog.club_id == current_user.club_id)
+        .order_by(ActivityLog.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = result.all()
+
+    return [
+        ActivityLogResponse(
+            id=log.id,
+            club_id=log.club_id,
+            user_id=log.user_id,
+            user_name=user_name,
+            activity_type=log.activity_type.value,
+            description=log.description,
+            target_user_id=log.target_user_id,
+            target_user_name=target_name,
+            created_at=log.created_at,
+        )
+        for log, user_name, target_name in rows
+    ]

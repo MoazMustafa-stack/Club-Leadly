@@ -22,6 +22,14 @@ class TaskStatusEnum(str, enum.Enum):
     completed = "completed"
 
 
+class ActivityTypeEnum(str, enum.Enum):
+    member_joined = "member_joined"
+    member_left = "member_left"
+    member_promoted = "member_promoted"
+    points_awarded = "points_awarded"
+    task_completed = "task_completed"
+
+
 class PriorityEnum(str, enum.Enum):
     low = "low"
     medium = "medium"
@@ -162,6 +170,18 @@ class PasswordResetToken(Base):
 # ---------------------------------------------------------------------------
 # NotificationPreference — per-user toggles for each notification type
 # ---------------------------------------------------------------------------
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    club_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clubs.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    activity_type: Mapped[ActivityTypeEnum] = mapped_column(Enum(ActivityTypeEnum), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    target_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
 
 class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
