@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ function getEmoji(index: number) {
 }
 
 export default function DashboardScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, leaveClub } = useAuth();
   const isOrganiser = useIsOrganiser();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -220,6 +221,33 @@ export default function DashboardScreen() {
           The higher your score, the higher your rank in the club.
         </Text>
       </View>
+
+      {/* Leave Club */}
+      <TouchableOpacity
+        style={styles.leaveBtn}
+        onPress={() =>
+          Alert.alert(
+            "Leave Club",
+            "Are you sure you want to leave this club? Your points and task history will be lost.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Leave",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    await leaveClub();
+                  } catch (e: any) {
+                    Alert.alert("Error", e?.message || "Failed to leave club");
+                  }
+                },
+              },
+            ]
+          )
+        }
+      >
+        <Text style={styles.leaveText}>Leave Club</Text>
+      </TouchableOpacity>
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
@@ -473,6 +501,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoutText: {
+    color: "#DC2626",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  leaveBtn: {
+    alignSelf: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: "#DC2626",
+    borderRadius: 12,
+  },
+  leaveText: {
     color: "#DC2626",
     fontWeight: "600",
     fontSize: 14,

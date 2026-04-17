@@ -42,6 +42,7 @@ interface AuthState {
   register: (data: RegisterRequest) => Promise<void>;
   createClub: (data: CreateClubRequest) => Promise<void>;
   joinClub: (data: JoinClubRequest) => Promise<void>;
+  leaveClub: () => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 
@@ -157,6 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [saveToken]
   );
 
+  const leaveClub = useCallback(async () => {
+    const res = await api<TokenResponse>("/clubs/leave", {
+      method: "DELETE",
+    });
+    await saveToken(res.access_token);
+    queryClient.clear();
+  }, [saveToken, queryClient]);
+
   const logout = useCallback(async () => {
     // Revoke token server-side (best-effort)
     try {
@@ -189,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         createClub,
         joinClub,
+        leaveClub,
         logout,
         refreshAuth,
         isAuthenticated,

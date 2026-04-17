@@ -158,6 +158,58 @@ def _require_club(current_user: CurrentUser) -> None:
         )
 
 
+@router.delete("/leave", status_code=status.HTTP_200_OK)
+async def leave_club(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Leave the current club.
+
+    Members can always leave. Organisers can only leave if there is at
+    least one other organiser remaining (to prevent orphaned clubs).
+    Returns a new token without club_id so the user lands on the
+    create/join flow.
+    """
+    _require_club(current_user)
+
+    result = await db.execute(
+        select(Membership).where(
+            Membership.club_id == current_user.club_id,
+            Membership.user_id == current_user.user_id,
+        )
+    )
+    membership = result.scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Membership not found")
+
+    # If the user is an organiser, ensure there's at least one other organiser
+    if membership.role == RoleEnum.organiser:
+        other_organisers = await db.execute(
+            select(Membership).where(
+                Membership.club_id == current_user.club_id,
+                Membership.role == RoleEnum.organiser,
+                Membership.user_id != current_user.user_id,
+            )
+        )
+        if other_organisers.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You are the only organiser. Promote another member before leaving.",
+            )
+
+    await db.delete(membership)
+    await db.commit()
+
+    # Issue a new token without club_id so user returns to create/join screen
+    token = create_access_token(
+        {
+            "sub": str(current_user.user_id),
+            "email": current_user.email,
+        }
+    )
+    return TokenResponse(access_token=token)
+
+
 @router.get("/me", response_model=ClubDetailResponse)
 async def get_club_details(
     current_user: CurrentUser = Depends(get_current_user),
